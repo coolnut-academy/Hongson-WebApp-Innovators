@@ -18,6 +18,11 @@
 </head>
 <body>
 
+  <!-- Top Global Progress Bar for Network Requests -->
+  <div id="globalProgressBar" class="global-progress-bar hidden" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+    <div id="globalProgressBarFill" class="global-progress-bar-fill"></div>
+  </div>
+
   <!-- Admin Mode Notification Bar (Visible only when Admin is logged in) -->
   <aside id="adminBar" class="admin-bar hidden" aria-label="แถบควบคุมผู้ดูแลระบบ">
     <div class="container">
@@ -95,6 +100,29 @@
             </h2>
           </div>
 
+          <!-- Rich Progress Loader for Categories -->
+          <div id="categoriesLoadingProgress" class="section-progress-card hidden" role="status">
+            <div class="progress-card-header">
+              <div class="progress-card-icon-wrap">
+                <span class="progress-card-spinner"></span>
+                <span class="progress-card-icon">📊</span>
+              </div>
+              <div class="progress-card-info">
+                <h3 class="progress-card-title">กำลังโหลดข้อมูลหัวข้อจาก Google Sheets</h3>
+                <p id="categoriesProgressStageText" class="progress-card-stage">กำลังเชื่อมต่อ Google Sheets API...</p>
+              </div>
+              <div class="progress-card-percent-badge">
+                <span id="categoriesProgressPercent">0</span>%
+              </div>
+            </div>
+            <div class="progress-bar-track">
+              <div id="categoriesProgressBarFill" class="progress-bar-fill" style="width: 0%;"></div>
+            </div>
+            <div class="progress-card-footer">
+              <span class="progress-card-hint">💡 ระบบกำลังดึงข้อมูลล่าสุดจาก Google Sheets กรุณารอสักครู่ ไม่จำเป็นต้องกดรีเฟรชหน้าเว็บ (F5)</span>
+            </div>
+          </div>
+
           <!-- Loading Skeleton for Categories -->
           <div id="categoriesLoadingSkeleton" class="skeleton-grid hidden">
             <div class="skeleton-card"></div>
@@ -170,6 +198,29 @@
           </div>
         </div>
 
+        <!-- Rich Progress Loader for Submissions -->
+        <div id="submissionsLoadingProgress" class="section-progress-card hidden" role="status">
+          <div class="progress-card-header">
+            <div class="progress-card-icon-wrap">
+              <span class="progress-card-spinner"></span>
+              <span class="progress-card-icon">🚀</span>
+            </div>
+            <div class="progress-card-info">
+              <h3 class="progress-card-title">กำลังโหลดผลงานเว็บแอปและรูปภาพจาก Google Drive</h3>
+              <p id="submissionsProgressStageText" class="progress-card-stage">กำลังเชื่อมต่อฐานข้อมูล Google Sheets & Google Drive...</p>
+            </div>
+            <div class="progress-card-percent-badge">
+              <span id="submissionsProgressPercent">0</span>%
+            </div>
+          </div>
+          <div class="progress-bar-track">
+            <div id="submissionsProgressBarFill" class="progress-bar-fill" style="width: 0%;"></div>
+          </div>
+          <div class="progress-card-footer">
+            <span class="progress-card-hint">💡 กำลังซิงค์ข้อมูลผลงานล่าสุด กรุณารอสักครู่ ไม่จำเป็นต้องกดรีเฟรชหน้าเว็บ ระบบกำลังจัดเตรียมข้อมูลให้คุณอัตโนมัติ</span>
+          </div>
+        </div>
+
         <!-- Loading Skeleton for Gallery -->
         <div id="submissionsLoadingSkeleton" class="skeleton-grid hidden">
           <div class="skeleton-card"></div>
@@ -231,6 +282,74 @@
         <h3 id="submitModalTitle" class="modal-title">🚀 ส่งผลงาน Web App นักเรียน</h3>
         <button id="closeSubmitModalBtn" class="modal-close" aria-label="ปิดหน้าต่าง">&times;</button>
       </div>
+
+      <!-- Submission Progress Overlay (shown during submit) -->
+      <div id="submissionProgressOverlay" class="submission-progress-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="submissionProgressTitle">
+        <div class="submission-progress-box">
+          <div class="submission-progress-rocket">
+            <div class="rocket-icon-pulse">🚀</div>
+            <div class="rocket-orbit-ring"></div>
+          </div>
+          <h3 id="submissionProgressTitle" class="submission-progress-title">กำลังส่งผลงานของคุณเข้าสู่ระบบ...</h3>
+          <p id="submissionProgressSubtitle" class="submission-progress-subtitle">ระบบกำลังนำส่งผลงานไปยัง Google Drive และบันทึกลง Google Sheets</p>
+          
+          <!-- Big Percentage Counter -->
+          <div class="submission-percent-wrap">
+            <span id="submissionPercentNumber" class="submission-percent-number">0</span>
+            <span class="submission-percent-sign">%</span>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="progress-bar-track submission-progress-track">
+            <div id="submissionProgressBarFill" class="progress-bar-fill animated-stripes" style="width: 0%;"></div>
+          </div>
+
+          <!-- Stepper Checklist -->
+          <div class="submission-steps-list">
+            <div class="step-item" id="submitStep1">
+              <span class="step-icon">📋</span>
+              <span class="step-label">1. ตรวจสอบความถูกต้องของข้อมูล</span>
+              <span class="step-status">⏳</span>
+            </div>
+            <div class="step-item" id="submitStep2">
+              <span class="step-icon">🖼️</span>
+              <span class="step-label">2. ประมวลผลและบีบอัดรูปภาพหน้าปก</span>
+              <span class="step-status">⏳</span>
+            </div>
+            <div class="step-item" id="submitStep3">
+              <span class="step-icon">☁️</span>
+              <span class="step-label">3. กำลังอัปโหลดภาพขึ้น Google Drive</span>
+              <span class="step-status">⏳</span>
+            </div>
+            <div class="step-item" id="submitStep4">
+              <span class="step-icon">📊</span>
+              <span class="step-label">4. กำลังบันทึกข้อมูลลง Google Sheets</span>
+              <span class="step-status">⏳</span>
+            </div>
+            <div class="step-item" id="submitStep5">
+              <span class="step-icon">✨</span>
+              <span class="step-label">5. ตรวจสอบความสมบูรณ์และเสร็จสิ้น</span>
+              <span class="step-status">⏳</span>
+            </div>
+          </div>
+
+          <!-- Safe Warning Notice -->
+          <div class="submission-warning-banner">
+            <span class="warning-icon">⚠️</span>
+            <div class="warning-text">
+              <strong>กรุณารอสักครู่ ห้ามปิดหน้าต่างหรือกดรีเฟรชหน้าเว็บ</strong><br>
+              ระบบกำลังเชื่อมต่อ Google Drive และ Google Sheets เพื่อความปลอดภัยของข้อมูล
+            </div>
+          </div>
+
+          <!-- Submission Error Container (Hidden by default) -->
+          <div id="submissionProgressError" class="submission-error-box hidden">
+            <p id="submissionProgressErrorMsg" class="submission-error-msg"></p>
+            <button type="button" id="submissionRetryBtn" class="btn btn-sm btn-primary">ลองใหม่อีกครั้ง</button>
+          </div>
+        </div>
+      </div>
+
       <form id="studentSubmissionForm">
         <div class="modal-body">
           <div class="form-group">
@@ -316,6 +435,17 @@
             <input type="password" id="adminPasswordInput" class="form-control" placeholder="กรอกรหัสผ่าน..." autocomplete="current-password" required>
             <div class="form-help">ในโหมด Prototype Phase 1 ใช้รหัส: <code>admin1234</code></div>
             <div id="adminLoginError" class="text-danger text-sm" style="margin-top:0.5rem;"></div>
+
+            <!-- Admin Login Progress Indicator -->
+            <div id="adminLoginProgress" class="admin-login-progress hidden">
+              <div class="admin-progress-header">
+                <span id="adminProgressText" class="text-sm font-medium text-muted">กำลังตรวจสอบความถูกต้อง...</span>
+                <span id="adminProgressPercent" class="font-bold text-sm" style="color: var(--primary);">0%</span>
+              </div>
+              <div class="progress-bar-track" style="height: 6px; margin-top: 0.5rem;">
+                <div id="adminProgressBarFill" class="progress-bar-fill" style="width: 0%;"></div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="modal-footer">

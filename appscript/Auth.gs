@@ -15,7 +15,7 @@ var Auth = (function() {
     }
 
     if (!password || String(password) !== String(masterPassword)) {
-      Utils.logAdminAction('LOGIN_FAILED', 'AUTH', '', 'Incorrect password attempt');
+      console.warn('Admin login attempt failed: Incorrect password');
       return {
         success: false,
         error: { code: 'INVALID_CREDENTIALS', message: 'รหัสผ่านผู้ดูแลระบบไม่ถูกต้อง' }
@@ -30,7 +30,7 @@ var Auth = (function() {
     // Store in cache
     cache.put('admin_token_' + token, 'valid', ttl);
 
-    Utils.logAdminAction('LOGIN_SUCCESS', 'AUTH', '', 'Admin logged in successfully');
+    console.info('Admin logged in successfully: ' + token);
 
     return {
       success: true,
@@ -49,7 +49,7 @@ var Auth = (function() {
     if (token) {
       var cache = CacheService.getScriptCache();
       cache.remove('admin_token_' + token);
-      Utils.logAdminAction('LOGOUT', 'AUTH', '', 'Admin logged out');
+      console.info('Admin logged out');
     }
     return { success: true, message: 'ออกจากระบบเรียบร้อย' };
   }

@@ -61,6 +61,284 @@ const UIUtils = {
   }
 };
 
+/**
+ * Page Loading Manager
+ * Manages animated section progress card with live percentage counters for Google Sheets & Drive loading
+ */
+const PageLoadingManager = {
+  catTimer: null,
+  subTimer: null,
+  catPercent: 0,
+  subPercent: 0,
+
+  startCategoriesLoading() {
+    clearInterval(this.catTimer);
+    this.catPercent = 15;
+
+    const progressCard = document.getElementById('categoriesLoadingProgress');
+    const skeleton = document.getElementById('categoriesLoadingSkeleton');
+    const percentEl = document.getElementById('categoriesProgressPercent');
+    const fillEl = document.getElementById('categoriesProgressBarFill');
+    const stageEl = document.getElementById('categoriesProgressStageText');
+
+    if (skeleton) skeleton.classList.add('hidden');
+    if (progressCard) progressCard.classList.remove('hidden');
+
+    if (percentEl) percentEl.textContent = '15';
+    if (fillEl) fillEl.style.width = '15%';
+    if (stageEl) stageEl.textContent = 'กำลังเชื่อมต่อ Google Sheets API...';
+
+    this.catTimer = setInterval(() => {
+      if (this.catPercent < 88) {
+        const step = (88 - this.catPercent) * 0.12;
+        this.catPercent += Math.max(1, Math.round(step));
+        if (percentEl) percentEl.textContent = Math.round(this.catPercent);
+        if (fillEl) fillEl.style.width = `${Math.round(this.catPercent)}%`;
+
+        if (this.catPercent >= 45 && this.catPercent < 75) {
+          if (stageEl) stageEl.textContent = 'กำลังอ่านรายชื่อหัวข้อและจำนวนผลงาน...';
+        } else if (this.catPercent >= 75) {
+          if (stageEl) stageEl.textContent = 'กำลังประมวลผลข้อมูลและเตรียมแสดงผล...';
+        }
+      }
+    }, 140);
+  },
+
+  finishCategoriesLoading(callback) {
+    clearInterval(this.catTimer);
+    const progressCard = document.getElementById('categoriesLoadingProgress');
+    const percentEl = document.getElementById('categoriesProgressPercent');
+    const fillEl = document.getElementById('categoriesProgressBarFill');
+    const stageEl = document.getElementById('categoriesProgressStageText');
+
+    if (percentEl) percentEl.textContent = '100';
+    if (fillEl) fillEl.style.width = '100%';
+    if (stageEl) stageEl.textContent = 'โหลดข้อมูลหัวข้อเสร็จสมบูรณ์!';
+
+    setTimeout(() => {
+      if (progressCard) progressCard.classList.add('hidden');
+      if (callback) callback();
+    }, 220);
+  },
+
+  failCategories(errorMsg) {
+    clearInterval(this.catTimer);
+    const progressCard = document.getElementById('categoriesLoadingProgress');
+    const stageEl = document.getElementById('categoriesProgressStageText');
+    if (stageEl) stageEl.textContent = 'เกิดข้อผิดพลาด: ' + (errorMsg || 'ไม่สามารถโหลดได้');
+    setTimeout(() => {
+      if (progressCard) progressCard.classList.add('hidden');
+    }, 1500);
+  },
+
+  startSubmissionsLoading(catTitle = '') {
+    clearInterval(this.subTimer);
+    this.subPercent = 15;
+
+    const progressCard = document.getElementById('submissionsLoadingProgress');
+    const skeleton = document.getElementById('submissionsLoadingSkeleton');
+    const percentEl = document.getElementById('submissionsProgressPercent');
+    const fillEl = document.getElementById('submissionsProgressBarFill');
+    const stageEl = document.getElementById('submissionsProgressStageText');
+
+    if (skeleton) skeleton.classList.add('hidden');
+    if (progressCard) progressCard.classList.remove('hidden');
+
+    if (percentEl) percentEl.textContent = '15';
+    if (fillEl) fillEl.style.width = '15%';
+    if (stageEl) stageEl.textContent = 'กำลังเชื่อมต่อฐานข้อมูล Google Sheets & Google Drive...';
+
+    this.subTimer = setInterval(() => {
+      if (this.subPercent < 90) {
+        const step = (90 - this.subPercent) * 0.12;
+        this.subPercent += Math.max(1, Math.round(step));
+        if (percentEl) percentEl.textContent = Math.round(this.subPercent);
+        if (fillEl) fillEl.style.width = `${Math.round(this.subPercent)}%`;
+
+        if (this.subPercent >= 45 && this.subPercent < 75) {
+          if (stageEl) stageEl.textContent = catTitle ? `กำลังดึงข้อมูลผลงานในหัวข้อ "${catTitle}"...` : 'กำลังดึงข้อมูลผลงานและภาพจาก Google Drive...';
+        } else if (this.subPercent >= 75) {
+          if (stageEl) stageEl.textContent = 'กำลังจัดเรียงผลงานตามเลขที่และเตรียมแสดงผล...';
+        }
+      }
+    }, 140);
+  },
+
+  finishSubmissionsLoading(callback) {
+    clearInterval(this.subTimer);
+    const progressCard = document.getElementById('submissionsLoadingProgress');
+    const percentEl = document.getElementById('submissionsProgressPercent');
+    const fillEl = document.getElementById('submissionsProgressBarFill');
+    const stageEl = document.getElementById('submissionsProgressStageText');
+
+    if (percentEl) percentEl.textContent = '100';
+    if (fillEl) fillEl.style.width = '100%';
+    if (stageEl) stageEl.textContent = 'โหลดผลงานทั้งหมดเสร็จสิ้น!';
+
+    setTimeout(() => {
+      if (progressCard) progressCard.classList.add('hidden');
+      if (callback) callback();
+    }, 220);
+  },
+
+  failSubmissions(errorMsg) {
+    clearInterval(this.subTimer);
+    const progressCard = document.getElementById('submissionsLoadingProgress');
+    const stageEl = document.getElementById('submissionsProgressStageText');
+    if (stageEl) stageEl.textContent = 'เกิดข้อผิดพลาด: ' + (errorMsg || 'ไม่สามารถโหลดได้');
+    setTimeout(() => {
+      if (progressCard) progressCard.classList.add('hidden');
+    }, 1500);
+  }
+};
+
+/**
+ * Submission Progress Overlay Controller
+ * Manages modal overlay, 5-step checklist, rocket animation, and dynamic percentage counter
+ */
+const SubmissionProgress = {
+  overlay: null,
+  percentEl: null,
+  fillEl: null,
+  subtitleEl: null,
+  errorBox: null,
+  errorMsg: null,
+  retryBtn: null,
+  currentPercent: 0,
+  tweenTimer: null,
+
+  init() {
+    this.overlay = document.getElementById('submissionProgressOverlay');
+    this.percentEl = document.getElementById('submissionPercentNumber');
+    this.fillEl = document.getElementById('submissionProgressBarFill');
+    this.subtitleEl = document.getElementById('submissionProgressSubtitle');
+    this.errorBox = document.getElementById('submissionProgressError');
+    this.errorMsg = document.getElementById('submissionProgressErrorMsg');
+    this.retryBtn = document.getElementById('submissionRetryBtn');
+  },
+
+  start() {
+    if (!this.overlay) this.init();
+    if (!this.overlay) return;
+
+    this.currentPercent = 0;
+    this.setPercent(5);
+    this.overlay.classList.remove('hidden');
+    if (this.errorBox) this.errorBox.classList.add('hidden');
+
+    // Reset steps
+    for (let i = 1; i <= 5; i++) {
+      const step = document.getElementById('submitStep' + i);
+      if (step) {
+        step.className = 'step-item';
+        const status = step.querySelector('.step-status');
+        if (status) status.textContent = '⏳';
+      }
+    }
+
+    this.setStep(1, 15, 'กำลังตรวจสอบความถูกต้องของข้อมูล...');
+  },
+
+  setStep(stepIndex, targetPercent, text) {
+    if (this.subtitleEl) this.subtitleEl.textContent = text;
+    this.animateToPercent(targetPercent);
+
+    for (let i = 1; i <= 5; i++) {
+      const step = document.getElementById('submitStep' + i);
+      if (!step) continue;
+      const status = step.querySelector('.step-status');
+
+      if (i < stepIndex) {
+        step.className = 'step-item is-completed';
+        if (status) status.textContent = '✅';
+      } else if (i === stepIndex) {
+        step.className = 'step-item is-active';
+        if (status) status.textContent = '🔄';
+      } else {
+        step.className = 'step-item';
+        if (status) status.textContent = '⏳';
+      }
+    }
+  },
+
+  update(stepNum, percent, detail) {
+    this.setStep(stepNum, percent, detail || 'กำลังดำเนินการ...');
+  },
+
+  animateToPercent(target) {
+    clearInterval(this.tweenTimer);
+    target = Math.min(100, Math.max(0, target));
+
+    this.tweenTimer = setInterval(() => {
+      if (this.currentPercent < target) {
+        this.currentPercent = Math.min(target, this.currentPercent + 2);
+        this.setPercent(this.currentPercent);
+      } else {
+        clearInterval(this.tweenTimer);
+      }
+    }, 25);
+  },
+
+  setPercent(val) {
+    this.currentPercent = val;
+    if (this.percentEl) this.percentEl.textContent = val;
+    if (this.fillEl) this.fillEl.style.width = `${val}%`;
+  },
+
+  complete(message, callback) {
+    clearInterval(this.tweenTimer);
+    this.setPercent(100);
+
+    for (let i = 1; i <= 5; i++) {
+      const step = document.getElementById('submitStep' + i);
+      if (step) {
+        step.className = 'step-item is-completed';
+        const status = step.querySelector('.step-status');
+        if (status) status.textContent = '✅';
+      }
+    }
+
+    if (this.subtitleEl) {
+      this.subtitleEl.textContent = message || 'ส่งผลงาน Web App สำเร็จเรียบร้อยแล้ว! 🎉';
+      this.subtitleEl.style.color = '#16a34a';
+      this.subtitleEl.style.fontWeight = 'bold';
+    }
+
+    setTimeout(() => {
+      if (callback) callback();
+      this.reset();
+    }, 650);
+  },
+
+  error(msg, onRetry) {
+    clearInterval(this.tweenTimer);
+    if (this.subtitleEl) {
+      this.subtitleEl.textContent = 'เกิดข้อผิดพลาดในการส่งผลงาน';
+      this.subtitleEl.style.color = 'var(--accent-rose)';
+    }
+    if (this.errorBox) {
+      this.errorBox.classList.remove('hidden');
+      if (this.errorMsg) this.errorMsg.textContent = msg;
+      if (this.retryBtn) {
+        this.retryBtn.onclick = () => {
+          if (onRetry) onRetry();
+        };
+      }
+    }
+  },
+
+  reset() {
+    clearInterval(this.tweenTimer);
+    if (this.overlay) this.overlay.classList.add('hidden');
+    if (this.errorBox) this.errorBox.classList.add('hidden');
+    if (this.subtitleEl) {
+      this.subtitleEl.style.color = '';
+      this.subtitleEl.style.fontWeight = '';
+    }
+    this.setPercent(0);
+  }
+};
+
 const App = {
   currentCategoryId: null,
   currentCategory: null,
@@ -223,27 +501,29 @@ const App = {
     const homeView = document.getElementById('homeView');
     const categoryDetailView = document.getElementById('categoryDetailView');
     const container = document.getElementById('categoryCardsGrid');
-    const skeleton = document.getElementById('categoriesLoadingSkeleton');
     const emptyState = document.getElementById('categoriesEmptyState');
 
     if (homeView) homeView.classList.remove('hidden');
     if (categoryDetailView) categoryDetailView.classList.add('hidden');
-    if (skeleton) skeleton.classList.remove('hidden');
     if (emptyState) emptyState.classList.add('hidden');
     if (container) container.innerHTML = '';
+
+    PageLoadingManager.startCategoriesLoading();
 
     try {
       const res = await api.getCategories();
       if (res.success) {
         this.allCategories = res.data || [];
-        this.renderCategories();
+        PageLoadingManager.finishCategoriesLoading(() => {
+          this.renderCategories();
+        });
       } else {
+        PageLoadingManager.failCategories(res.error?.message || 'ไม่สามารถโหลดข้อมูลหัวข้อได้');
         UIUtils.showToast(res.error?.message || 'ไม่สามารถโหลดข้อมูลหัวข้อได้', 'error');
       }
     } catch (err) {
+      PageLoadingManager.failCategories(err.message);
       UIUtils.showToast('เกิดข้อผิดพลาดในการโหลดหัวข้อ: ' + err.message, 'error');
-    } finally {
-      if (skeleton) skeleton.classList.add('hidden');
     }
   },
 
@@ -339,20 +619,21 @@ const App = {
     this.currentCategoryId = categoryId;
     const homeView = document.getElementById('homeView');
     const categoryDetailView = document.getElementById('categoryDetailView');
-    const skeleton = document.getElementById('submissionsLoadingSkeleton');
     const galleryGrid = document.getElementById('gameGalleryGrid');
 
     if (homeView) homeView.classList.add('hidden');
     if (categoryDetailView) categoryDetailView.classList.remove('hidden');
-    if (skeleton) skeleton.classList.remove('hidden');
     if (galleryGrid) galleryGrid.innerHTML = '';
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    PageLoadingManager.startSubmissionsLoading();
 
     try {
       // 1. Fetch category metadata
       const catRes = await api.getCategory(categoryId);
       if (!catRes.success) {
+        PageLoadingManager.failSubmissions('ไม่พบหัวข้อ');
         UIUtils.showToast('ไม่พบหัวข้อที่ระบุ กำลังกลับหน้าหลัก...', 'error');
         setTimeout(() => this.navigateToHome(), 1500);
         return;
@@ -364,14 +645,16 @@ const App = {
       const subRes = await api.getSubmissions(categoryId);
       if (subRes.success) {
         this.currentSubmissions = subRes.data || [];
-        this.renderSubmissions();
+        PageLoadingManager.finishSubmissionsLoading(() => {
+          this.renderSubmissions();
+        });
       } else {
+        PageLoadingManager.failSubmissions(subRes.error?.message || 'ไม่สามารถโหลดผลงานได้');
         UIUtils.showToast(subRes.error?.message || 'ไม่สามารถโหลดผลงานได้', 'error');
       }
     } catch (err) {
+      PageLoadingManager.failSubmissions(err.message);
       UIUtils.showToast('เกิดข้อผิดพลาดในการโหลดรายละเอียด: ' + err.message, 'error');
-    } finally {
-      if (skeleton) skeleton.classList.add('hidden');
     }
   },
 
@@ -677,8 +960,10 @@ const App = {
   },
 
   closeSubmissionModal() {
+    if (this.isSubmitting) return; // Prevent closing while in progress
     const modal = document.getElementById('submissionModal');
     if (modal) modal.classList.add('hidden');
+    SubmissionProgress.reset();
     this.processedCover = null;
   },
 
@@ -779,11 +1064,34 @@ const App = {
       if (!confirmDup) return;
     }
 
-    // UI Loading state
+    // Safety flag & UI Loading state
+    this.isSubmitting = true;
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span>⏳ กำลังส่งผลงาน...</span>';
 
+    SubmissionProgress.start();
+
     try {
+      // Step 2: Image compression check
+      if (!this.processedCover) {
+        const fileInput = document.getElementById('submitCoverInput');
+        const file = fileInput?.files?.[0];
+        if (file) {
+          SubmissionProgress.update(2, 35, 'กำลังประมวลผลและบีบอัดรูปภาพหน้าปก...');
+          this.processedCover = await ImageUtils.processCoverImage(file);
+        } else {
+          this.isSubmitting = false;
+          SubmissionProgress.error('กรุณาเลือกรูปภาพหน้าปกผลงาน', () => {
+            SubmissionProgress.reset();
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span>🚀 ส่งผลงาน</span>';
+          });
+          return;
+        }
+      } else {
+        SubmissionProgress.update(2, 35, 'รูปภาพได้รับการบีบอัดและปรับขนาดเรียบร้อยแล้ว');
+      }
+
       const payload = {
         categoryId: this.currentCategoryId,
         studentName,
@@ -798,31 +1106,55 @@ const App = {
         coverMimeType: this.processedCover ? this.processedCover.mimeType : 'image/webp'
       };
 
-      const res = await api.submitWork(payload);
-      if (res.success) {
-        this.closeSubmissionModal();
-        UIUtils.showToast(res.message || 'ส่งผลงาน Web App เรียบร้อยแล้ว! 🎉', 'success');
-        
-        // Reload submissions
-        await this.loadCategoryDetail(this.currentCategoryId);
+      const res = await api.submitWork(payload, (progress) => {
+        if (progress.stage === 'uploading') {
+          SubmissionProgress.update(3, progress.percent, progress.detail);
+        } else if (progress.stage === 'processing') {
+          SubmissionProgress.update(4, progress.percent, progress.detail);
+        } else if (progress.stage === 'completed') {
+          SubmissionProgress.update(5, 100, progress.detail);
+        }
+      });
 
-        // Highlight new card
-        setTimeout(() => {
-          const newCard = document.querySelector(`.game-card[data-id="${res.data?.submissionId}"]`);
-          if (newCard) {
-            newCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            newCard.classList.add('card-highlight');
-            setTimeout(() => newCard.classList.remove('card-highlight'), 3000);
-          }
-        }, 300);
+      if (res.success) {
+        this.isSubmitting = false;
+        SubmissionProgress.complete(res.message || 'ส่งผลงาน Web App สำเร็จเรียบร้อยแล้ว! 🎉', async () => {
+          this.closeSubmissionModal();
+          UIUtils.showToast(res.message || 'ส่งผลงาน Web App เรียบร้อยแล้ว! 🎉', 'success');
+          
+          // Reload submissions
+          await this.loadCategoryDetail(this.currentCategoryId);
+
+          // Highlight new card
+          setTimeout(() => {
+            const newCard = document.querySelector(`.game-card[data-id="${res.data?.submissionId}"]`);
+            if (newCard) {
+              newCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              newCard.classList.add('card-highlight');
+              setTimeout(() => newCard.classList.remove('card-highlight'), 3000);
+            }
+          }, 300);
+        });
       } else {
-        alert(res.error?.message || 'เกิดข้อผิดพลาดในการส่งผลงาน');
+        this.isSubmitting = false;
+        SubmissionProgress.error(res.error?.message || 'เกิดข้อผิดพลาดในการส่งผลงาน', () => {
+          SubmissionProgress.reset();
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span>🚀 ส่งผลงาน</span>';
+        });
       }
     } catch (err) {
-      alert('Error: ' + err.message);
+      this.isSubmitting = false;
+      SubmissionProgress.error('Error: ' + err.message, () => {
+        SubmissionProgress.reset();
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>🚀 ส่งผลงาน</span>';
+      });
     } finally {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = '<span>🚀 ส่งผลงาน</span>';
+      if (!this.isSubmitting) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>🚀 ส่งผลงาน</span>';
+      }
     }
   }
 };

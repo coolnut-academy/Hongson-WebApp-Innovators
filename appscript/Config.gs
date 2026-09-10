@@ -32,7 +32,18 @@ var Config = (function() {
       return extractId(raw, /\/folders\/([a-zA-Z0-9-_]+)/);
     },
     getAdminPassword: function() {
-      return (props.getProperty('ADMIN_PASSWORD') || '').trim();
+      try {
+        var cache = CacheService.getScriptCache();
+        var cached = cache.get('cfg_admin_pass');
+        if (cached) return cached;
+        var pass = (props.getProperty('ADMIN_PASSWORD') || '').trim();
+        if (pass) {
+          cache.put('cfg_admin_pass', pass, 600); // Cache 10 minutes for fast login
+        }
+        return pass;
+      } catch (e) {
+        return (props.getProperty('ADMIN_PASSWORD') || '').trim();
+      }
     },
     getAllowedOrigin: function() {
       return (props.getProperty('ALLOWED_FRONTEND_ORIGIN') || '*').trim();

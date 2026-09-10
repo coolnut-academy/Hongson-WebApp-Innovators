@@ -6,6 +6,65 @@
  * In Phase 4: Seamlessly switches to Google Apps Script Web App HTTPS requests.
  */
 
+/**
+ * Top Global Progress Bar Controller
+ */
+const GlobalProgressBar = {
+  element: null,
+  fillElement: null,
+  progress: 0,
+  timer: null,
+
+  init() {
+    this.element = document.getElementById('globalProgressBar');
+    this.fillElement = document.getElementById('globalProgressBarFill');
+  },
+
+  start() {
+    if (!this.element) this.init();
+    if (!this.element) return;
+    this.element.classList.remove('hidden');
+    this.progress = 12;
+    this.update();
+
+    clearInterval(this.timer);
+    this.timer = setInterval(() => {
+      if (this.progress < 85) {
+        const diff = (85 - this.progress) * 0.12;
+        this.progress += Math.max(1, diff);
+        this.update();
+      }
+    }, 180);
+  },
+
+  set(percent) {
+    if (!this.element) this.init();
+    this.progress = Math.min(100, Math.max(0, percent));
+    this.update();
+  },
+
+  done() {
+    if (!this.element) return;
+    clearInterval(this.timer);
+    this.progress = 100;
+    this.update();
+    setTimeout(() => {
+      if (this.element) this.element.classList.add('hidden');
+      this.progress = 0;
+      this.update();
+    }, 350);
+  },
+
+  update() {
+    if (this.fillElement) {
+      this.fillElement.style.width = `${Math.round(this.progress)}%`;
+      if (this.element) {
+        this.element.setAttribute('aria-valuenow', Math.round(this.progress));
+      }
+    }
+  }
+};
+
 class ApiClient {
   constructor() {
     this.apiUrl = APP_CONFIG.API_URL || '';
@@ -130,13 +189,14 @@ class ApiClient {
   }
 
   /**
-   * Submit student game
+   * Submit student game with real-time progress callbacks
    * @param {Object} payload
+   * @param {Function} [onProgress]
    */
-  async submitWork(payload) {
+  async submitWork(payload, onProgress = null) {
     if (this.isMock) {
-      // Simulate network delay
-      await new Promise(r => setTimeout(r, 600));
+      if (onProgress) onProgress({ stage: 'validate', percent: 15, detail: 'ตรวจสอบความถูกต้องของข้อมูล...' });
+      await new Promise(r => setTimeout(r, 250));
 
       const categories = this._getMockCategories();
       const cat = categories.find(c => c.categoryId === payload.categoryId);
@@ -151,6 +211,15 @@ class ApiClient {
       if (!payload.studentName || !payload.className || !payload.studentNo || !payload.workTitle || !payload.workUrl) {
         return { success: false, error: { code: 'VALIDATION_ERROR', message: 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน' } };
       }
+
+      if (onProgress) onProgress({ stage: 'compress', percent: 35, detail: 'ประมวลผลและลดขนาดภาพหน้าปก...' });
+      await new Promise(r => setTimeout(r, 350));
+
+      if (onProgress) onProgress({ stage: 'drive', percent: 65, detail: 'กำลังอัปโหลดไฟล์ภาพไปยัง Google Drive...' });
+      await new Promise(r => setTimeout(r, 450));
+
+      if (onProgress) onProgress({ stage: 'sheets', percent: 88, detail: 'กำลังบันทึกแถวข้อมูลลงใน Google Sheets...' });
+      await new Promise(r => setTimeout(r, 350));
 
       const submissions = this._getMockSubmissions();
       const newSubmission = {
@@ -174,6 +243,8 @@ class ApiClient {
       submissions.push(newSubmission);
       this._saveMockSubmissions(submissions);
 
+      if (onProgress) onProgress({ stage: 'completed', percent: 100, detail: 'ส่งผลงานและบันทึกข้อมูลเรียบร้อยแล้ว!' });
+
       return {
         success: true,
         data: newSubmission,
@@ -181,7 +252,9 @@ class ApiClient {
       };
     }
 
-    const res = await this._postJson({ action: 'submitWork', ...payload });
+    GlobalProgressBar.start();
+    const res = await this._postJsonWithProgress({ action: 'submitWork', ...payload }, onProgress);
+    GlobalProgressBar.done();
     if (res.success) {
       this.clearCache('submissions_' + payload.categoryId);
       this.clearCache('categories');
@@ -338,18 +411,21 @@ class ApiClient {
    * ----------------------------------------------------------- */
 
   async _fetchJson(url, timeoutMs = 30000) {
+    GlobalProgressBar.start();
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       const res = await fetch(url, { method: 'GET', signal: controller.signal });
       clearTimeout(timeoutId);
+      GlobalProgressBar.done();
       if (!res.ok) {
         throw new Error(`HTTP Error: ${res.status} ${res.statusText}`);
       }
       return await res.json();
     } catch (err) {
       clearTimeout(timeoutId);
+      GlobalProgressBar.done();
       console.error('Fetch error:', err);
       let message = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: ' + err.message;
       if (err.name === 'AbortError') {
@@ -364,7 +440,8 @@ class ApiClient {
     }
   }
 
-  async _postJson(payload, timeoutMs = 30000) {
+  async _postJson(payload, timeoutMs = 35000) {
+    GlobalProgressBar.start();
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -378,16 +455,18 @@ class ApiClient {
         signal: controller.signal
       });
       clearTimeout(timeoutId);
+      GlobalProgressBar.done();
       if (!res.ok) {
         throw new Error(`HTTP Error: ${res.status} ${res.statusText}`);
       }
       return await res.json();
     } catch (err) {
       clearTimeout(timeoutId);
+      GlobalProgressBar.done();
       console.error('Post error:', err);
       let message = 'เกิดข้อผิดพลาดในการส่งข้อมูล: ' + err.message;
       if (err.name === 'AbortError') {
-        message = 'การส่งข้อมูลหมดเวลา (Request Timeout 30s) กรุณาลองใหม่อีกครั้ง';
+        message = 'การส่งข้อมูลหมดเวลา (Request Timeout) กรุณาลองใหม่อีกครั้ง';
       } else if (err instanceof TypeError && err.message.includes('fetch')) {
         message = 'ไม่สามารถส่งข้อมูลไปยัง Google Apps Script ได้ กรุณาตรวจสอบการตั้งค่า URL';
       }
@@ -396,6 +475,94 @@ class ApiClient {
         error: { code: err.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK_ERROR', message }
       };
     }
+  }
+
+  /**
+   * Post JSON with Real-Time Upload Progress (using XMLHttpRequest)
+   */
+  _postJsonWithProgress(payload, onProgress, timeoutMs = 60000) {
+    return new Promise((resolve) => {
+      const xhr = new XMLHttpRequest();
+      let timedOut = false;
+      const timeoutId = setTimeout(() => {
+        timedOut = true;
+        xhr.abort();
+      }, timeoutMs);
+
+      if (onProgress) {
+        onProgress({ stage: 'uploading', percent: 15, detail: 'กำลังเชื่อมต่อเซิร์ฟเวอร์ Google Apps Script...' });
+      }
+
+      // Track byte upload
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable && onProgress) {
+          // Map network upload to 15% - 65% of overall process
+          const ratio = e.loaded / e.total;
+          const currentPct = Math.round(15 + ratio * 50);
+          onProgress({
+            stage: 'uploading',
+            percent: Math.min(65, currentPct),
+            detail: `กำลังอัปโหลดไฟล์และข้อมูลไปยังเซิร์ฟเวอร์ (${Math.round(ratio * 100)}%)...`
+          });
+        }
+      });
+
+      // Byte upload completed, now server processing
+      xhr.upload.addEventListener('load', () => {
+        if (onProgress) {
+          onProgress({
+            stage: 'processing',
+            percent: 70,
+            detail: 'กำลังบันทึกภาพลง Google Drive และเขียนข้อมูลลง Google Sheets...'
+          });
+        }
+      });
+
+      xhr.onreadystatechange = () => {
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+          clearTimeout(timeoutId);
+          if (timedOut) {
+            resolve({
+              success: false,
+              error: { code: 'TIMEOUT', message: 'การส่งข้อมูลหมดเวลา (Timeout 60s) กรุณาลองใหม่อีกครั้ง' }
+            });
+            return;
+          }
+
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              if (onProgress) {
+                onProgress({ stage: 'completed', percent: 100, detail: 'ส่งผลงานและบันทึกข้อมูลเรียบร้อยแล้ว!' });
+              }
+              resolve(data);
+            } catch (err) {
+              resolve({
+                success: false,
+                error: { code: 'PARSE_ERROR', message: 'ไม่สามารถอ่านผลตอบรับจากเซิร์ฟเวอร์ได้: ' + err.message }
+              });
+            }
+          } else {
+            resolve({
+              success: false,
+              error: { code: 'HTTP_ERROR', message: `เซิร์ฟเวอร์ตอบกลับผิดพลาด: ${xhr.status}` }
+            });
+          }
+        }
+      };
+
+      xhr.onerror = () => {
+        clearTimeout(timeoutId);
+        resolve({
+          success: false,
+          error: { code: 'NETWORK_ERROR', message: 'ไม่สามารถเชื่อมต่อ Google Apps Script ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต' }
+        });
+      };
+
+      xhr.open('POST', this.apiUrl, true);
+      xhr.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+      xhr.send(JSON.stringify(payload));
+    });
   }
 
   /* -------------------------------------------------------------

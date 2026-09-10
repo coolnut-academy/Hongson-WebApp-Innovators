@@ -134,6 +134,8 @@ const AdminApp = {
     const modal = document.getElementById('adminLoginModal');
     const input = document.getElementById('adminPasswordInput');
     const errorEl = document.getElementById('adminLoginError');
+    const progressWrap = document.getElementById('adminLoginProgress');
+    if (progressWrap) progressWrap.classList.add('hidden');
     if (errorEl) errorEl.textContent = '';
     if (input) input.value = '';
     if (modal) {
@@ -144,6 +146,8 @@ const AdminApp = {
 
   closeLoginModal() {
     const modal = document.getElementById('adminLoginModal');
+    const progressWrap = document.getElementById('adminLoginProgress');
+    if (progressWrap) progressWrap.classList.add('hidden');
     if (modal) modal.classList.add('hidden');
   },
 
@@ -152,6 +156,10 @@ const AdminApp = {
     const passwordInput = document.getElementById('adminPasswordInput');
     const submitBtn = document.getElementById('adminLoginSubmitBtn');
     const errorEl = document.getElementById('adminLoginError');
+    const progressWrap = document.getElementById('adminLoginProgress');
+    const progressText = document.getElementById('adminProgressText');
+    const progressPercent = document.getElementById('adminProgressPercent');
+    const progressBar = document.getElementById('adminProgressBarFill');
     const password = passwordInput?.value?.trim();
 
     if (!password) {
@@ -160,22 +168,55 @@ const AdminApp = {
     }
 
     submitBtn.disabled = true;
-    submitBtn.textContent = 'กำลังตรวจสอบ...';
+    submitBtn.textContent = 'กำลังเข้าสู่ระบบ...';
     if (errorEl) errorEl.textContent = '';
+
+    // Show progress bar with smooth progression
+    if (progressWrap) progressWrap.classList.remove('hidden');
+    if (progressPercent) progressPercent.textContent = '20%';
+    if (progressBar) progressBar.style.width = '20%';
+    if (progressText) progressText.textContent = 'กำลังส่งคำขอเข้าสู่ระบบ...';
+
+    let currentPct = 20;
+    const progressTimer = setInterval(() => {
+      if (currentPct < 85) {
+        currentPct += 5;
+        if (progressPercent) progressPercent.textContent = `${currentPct}%`;
+        if (progressBar) progressBar.style.width = `${currentPct}%`;
+
+        if (currentPct >= 50 && currentPct < 75) {
+          if (progressText) progressText.textContent = 'กำลังเชื่อมต่อเซสชันความปลอดภัย Google...';
+        } else if (currentPct >= 75) {
+          if (progressText) progressText.textContent = 'กำลังตรวจสอบสิทธิ์ผู้ดูแลระบบ...';
+        }
+      }
+    }, 120);
 
     try {
       const res = await api.adminLogin(password);
+      clearInterval(progressTimer);
+
       if (res.success && res.data?.token) {
+        if (progressPercent) progressPercent.textContent = '100%';
+        if (progressBar) progressBar.style.width = '100%';
+        if (progressText) progressText.textContent = 'ยืนยันสิทธิ์สำเร็จ!';
+
         sessionStorage.setItem(this.TOKEN_KEY, res.data.token);
-        this.closeLoginModal();
-        this.updateAdminUI();
-        UIUtils.showToast(res.message || 'เข้าสู่ระบบผู้ดูแลสำเร็จ', 'success');
-        // Refresh current view to show admin controls
-        window.dispatchEvent(new CustomEvent('adminStateChanged', { detail: { isLoggedIn: true } }));
+
+        setTimeout(() => {
+          this.closeLoginModal();
+          this.updateAdminUI();
+          UIUtils.showToast(res.message || 'เข้าสู่ระบบผู้ดูแลสำเร็จ', 'success');
+          // Refresh current view to show admin controls
+          window.dispatchEvent(new CustomEvent('adminStateChanged', { detail: { isLoggedIn: true } }));
+        }, 300);
       } else {
+        if (progressWrap) progressWrap.classList.add('hidden');
         if (errorEl) errorEl.textContent = res.error?.message || 'รหัสผ่านไม่ถูกต้อง';
       }
     } catch (err) {
+      clearInterval(progressTimer);
+      if (progressWrap) progressWrap.classList.add('hidden');
       if (errorEl) errorEl.textContent = 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ: ' + err.message;
     } finally {
       submitBtn.disabled = false;

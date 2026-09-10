@@ -986,6 +986,7 @@ body {
 }
 
 .modal-dialog {
+  position: relative; /* Ensure progress overlay properly covers dialog */
   background: var(--bg-card);
   border-radius: var(--radius-lg);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -1228,6 +1229,407 @@ textarea.form-control {
   color: var(--text-secondary);
   max-width: 440px;
   margin: 0 auto 1.25rem;
+}
+
+/* ==========================================================================
+   Progress Loaders & Real-Time Percentage Indicators
+   ========================================================================== */
+
+/* Top Global Progress Bar */
+.global-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: rgba(2, 132, 199, 0.15);
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.global-progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent-cyan), var(--primary), var(--accent-purple));
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.7);
+  transition: width 0.25s ease-out;
+}
+
+/* Section Progress Card (Home Categories & Gallery Detail) */
+.section-progress-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem 1.5rem;
+  margin: 1.5rem 0 2rem 0;
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+  animation: modal-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.section-progress-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-cyan), var(--primary), var(--accent-purple));
+}
+
+.progress-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.progress-card-icon-wrap {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-light);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.progress-card-icon {
+  font-size: 1.5rem;
+  z-index: 2;
+}
+
+.progress-card-spinner {
+  position: absolute;
+  inset: -3px;
+  border-radius: calc(var(--radius-md) + 3px);
+  border: 2px solid transparent;
+  border-top-color: var(--primary);
+  border-right-color: var(--accent-cyan);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.progress-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.progress-card-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.progress-card-stage {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.progress-card-percent-badge {
+  font-family: var(--font-family);
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--primary);
+  background: var(--primary-light);
+  padding: 0.25rem 0.85rem;
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 1px 2px rgba(2, 132, 199, 0.1);
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+
+/* Progress Track & Fill */
+.progress-bar-track {
+  width: 100%;
+  height: 10px;
+  background: #e2e8f0;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #0284c7 0%, #06b6d4 50%, #6366f1 100%);
+  border-radius: var(--radius-full);
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.5);
+  position: relative;
+}
+
+.progress-bar-fill.animated-stripes {
+  background-image: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.2) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.2) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 24px 24px;
+  animation: progress-stripes 1s linear infinite;
+}
+
+@keyframes progress-stripes {
+  0% { background-position: 24px 0; }
+  100% { background-position: 0 0; }
+}
+
+.progress-card-footer {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.progress-card-hint {
+  font-size: 0.825rem;
+  color: #0369a1;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.85rem;
+  width: 100%;
+  display: inline-block;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* ==========================================================================
+   Submission Progress Overlay (Modal)
+   ========================================================================== */
+.submission-progress-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  overflow-y: auto;
+  animation: modal-enter 0.25s ease-out;
+}
+
+.submission-progress-box {
+  width: 100%;
+  max-width: 460px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.submission-progress-rocket {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rocket-icon-pulse {
+  font-size: 2.75rem;
+  animation: rocket-float 2s ease-in-out infinite;
+  z-index: 2;
+}
+
+@keyframes rocket-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(5deg); }
+}
+
+.rocket-orbit-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px dashed var(--accent-cyan);
+  animation: spin 6s linear infinite;
+  opacity: 0.6;
+}
+
+.submission-progress-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.submission-progress-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+}
+
+/* Big Percentage Counter */
+.submission-percent-wrap {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.submission-percent-number {
+  font-size: 3.5rem;
+  font-weight: 800;
+  line-height: 1;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent-cyan) 60%, var(--accent-purple) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.03em;
+  font-family: var(--font-family);
+}
+
+.submission-percent-sign {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  margin-left: 0.2rem;
+}
+
+.submission-progress-track {
+  height: 14px;
+  margin-bottom: 1.25rem;
+  border: 1px solid #cbd5e1;
+}
+
+/* Stepper Checklist */
+.submission-steps-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  text-align: left;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.85rem;
+  background: #f8fafc;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.step-item .step-icon {
+  margin-right: 0.5rem;
+  font-size: 1rem;
+}
+
+.step-item .step-label {
+  flex: 1;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.step-item .step-status {
+  font-size: 0.95rem;
+}
+
+.step-item.is-active {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  box-shadow: 0 2px 4px rgba(2, 132, 199, 0.1);
+}
+
+.step-item.is-active .step-label {
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+
+.step-item.is-completed {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.step-item.is-completed .step-label {
+  color: #166534;
+}
+
+/* Warning banner */
+.submission-warning-banner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: var(--radius-md);
+  text-align: left;
+  font-size: 0.8rem;
+  color: #92400e;
+  line-height: 1.4;
+}
+
+.submission-warning-banner .warning-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+/* Error Box in Progress */
+.submission-error-box {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-md);
+  width: 100%;
+}
+
+.submission-error-msg {
+  color: var(--accent-rose);
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+
+/* Admin Login Progress */
+.admin-login-progress {
+  margin-top: 0.85rem;
+  padding: 0.75rem;
+  background: var(--bg-main);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.admin-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 /* ==========================================================================

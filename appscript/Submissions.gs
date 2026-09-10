@@ -72,13 +72,12 @@ var Submissions = (function() {
       throw new Error('หัวข้อนี้ปิดรับผลงานแล้ว ไม่สามารถส่งงานได้');
     }
 
-    var lock = LockService.getScriptLock();
     var uploadedFileId = null;
 
     try {
-      lock.waitLock(Config.LOCK_TIMEOUT_MS);
-
-      // 3. Upload Cover Image to Google Drive
+      // 3. Upload Cover Image to Google Drive OUTSIDE of script lock!
+      // Image base64 decoding and Drive file creation take 3-8s.
+      // Doing this outside lock ensures students do not block teacher admin operations.
       var coverInfo = Drive.uploadCoverImage(
         category.driveFolderId,
         payload.coverBase64,
@@ -87,31 +86,41 @@ var Submissions = (function() {
       );
       uploadedFileId = coverInfo.coverFileId;
 
-      // 4. Append Record to Google Sheets
-      var submissionId = Utils.generateUUID();
-      var now = Utils.getIsoTimestamp();
-      var ss = Sheets.getSpreadsheet();
-      var sheet = ss.getSheetByName(Config.SHEET_SUBMISSIONS);
+      // 4. Lock ONLY for the atomic Google Sheets appendRow (~0.1-0.2s)
+      var lock = LockService.getScriptLock();
+      try {
+        lock.waitLock(Config.LOCK_TIMEOUT_MS);
 
-      var newRow = [
-        submissionId,
-        payload.categoryId,
-        Utils.sanitizeForSheet(payload.studentName),
-        Utils.sanitizeForSheet(payload.className),
-        Number(payload.studentNo),
-        Utils.sanitizeForSheet(payload.studyProgram || ''),
-        Utils.sanitizeForSheet(payload.workTitle),
-        payload.workUrl.trim(),
-        coverInfo.coverFileId,
-        coverInfo.coverUrl,
-        coverInfo.coverOriginalName,
-        coverInfo.coverMimeType,
-        now,
-        now,
-        '' // deletedAt
-      ];
+        var submissionId = Utils.generateUUID();
+        var now = Utils.getIsoTimestamp();
+        var ss = Sheets.getSpreadsheet();
+        var sheet = ss.getSheetByName(Config.SHEET_SUBMISSIONS);
 
-      sheet.appendRow(newRow);
+        var newRow = [
+          submissionId,
+          payload.categoryId,
+          Utils.sanitizeForSheet(payload.studentName),
+          Utils.sanitizeForSheet(payload.className),
+          Number(payload.studentNo),
+          Utils.sanitizeForSheet(payload.studyProgram || ''),
+          Utils.sanitizeForSheet(payload.workTitle),
+          payload.workUrl.trim(),
+          coverInfo.coverFileId,
+          coverInfo.coverUrl,
+          coverInfo.coverOriginalName,
+          coverInfo.coverMimeType,
+          now,
+          now,
+          '' // deletedAt
+        ];
+
+        sheet.appendRow(newRow);
+      } finally {
+        lock.releaseLock();
+      }
+
+      // Invalidate categories cache so submission count is immediately refreshed
+      Categories.clearCache();
 
       return {
         submissionId: submissionId,
@@ -132,8 +141,6 @@ var Submissions = (function() {
         Drive.deleteFile(uploadedFileId);
       }
       throw e;
-    } finally {
-      lock.releaseLock();
     }
   }
 
@@ -166,10 +173,12 @@ var Submissions = (function() {
       }
 
       Utils.logAdminAction('DELETE_SUBMISSION', 'SUBMISSION', submissionId, 'Soft deleted submission');
-      return { success: true };
     } finally {
       lock.releaseLock();
     }
+
+    Categories.clearCache();
+    return { success: true };
   }
 
   return {

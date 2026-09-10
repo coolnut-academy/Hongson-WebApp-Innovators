@@ -490,6 +490,72 @@ body {
   background: var(--bg-main);
 }
 
+/* Direct Admin Action Bar on Category Cards */
+.cat-card-admin-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border-subtle);
+  flex-wrap: wrap;
+}
+
+.btn-danger-solid {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border: 1px solid #b91c1c !important;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.btn-danger-solid:hover {
+  background: #b91c1c !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.4);
+}
+
+/* Manage Rooms Modal Table */
+.admin-rooms-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.admin-rooms-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.admin-rooms-table th {
+  background: var(--bg-main);
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.admin-rooms-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
+}
+
+.admin-rooms-table tr:hover td {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.admin-table-action-btns {
+  display: flex;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
 /* ==========================================================================
    Category Detail View
    ========================================================================== */

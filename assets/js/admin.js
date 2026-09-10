@@ -61,6 +61,22 @@ const AdminApp = {
       createCatBtn.addEventListener('click', () => this.openCreateCategoryModal());
     }
 
+    // Manage rooms button
+    const manageRoomsBtn = document.getElementById('adminManageRoomsBtn');
+    if (manageRoomsBtn) {
+      manageRoomsBtn.addEventListener('click', () => this.openManageRoomsModal());
+    }
+
+    // Manage rooms modal close on backdrop click
+    const manageRoomsModal = document.getElementById('adminManageRoomsModal');
+    if (manageRoomsModal) {
+      manageRoomsModal.addEventListener('click', (e) => {
+        if (e.target === manageRoomsModal) {
+          this.closeManageRoomsModal();
+        }
+      });
+    }
+
     // Admin login modal close on backdrop click
     const loginModal = document.getElementById('adminLoginModal');
     if (loginModal) {
@@ -269,8 +285,101 @@ const AdminApp = {
     if (modal) modal.classList.add('hidden');
   },
 
+  /* -------------------------------------------------------------
+   * MANAGE & DELETE ROOMS MODAL
+   * ----------------------------------------------------------- */
+
+  openManageRoomsModal() {
+    const modal = document.getElementById('adminManageRoomsModal');
+    if (!modal) return;
+    this.renderManageRoomsList();
+    modal.classList.remove('hidden');
+  },
+
+  closeManageRoomsModal() {
+    const modal = document.getElementById('adminManageRoomsModal');
+    if (modal) modal.classList.add('hidden');
+  },
+
+  async renderManageRoomsList() {
+    const container = document.getElementById('adminRoomsListContainer');
+    if (!container) return;
+
+    container.innerHTML = '<div class="text-center p-3 text-muted">⏳ กำลังโหลดรายชื่อห้องส่งงาน...</div>';
+
+    let list = (typeof App !== 'undefined' && App.allCategories && App.allCategories.length > 0)
+      ? App.allCategories
+      : (api.getCachedCategories() || []);
+
+    if (list.length === 0) {
+      const res = await api.getCategories();
+      if (res.success && res.data) {
+        list = res.data;
+      }
+    }
+
+    if (!list || list.length === 0) {
+      container.innerHTML = '<div class="text-center p-3 text-muted">ไม่มีห้องส่งงานในระบบขณะนี้</div>';
+      return;
+    }
+
+    let html = '<div class="admin-rooms-table-wrap">';
+    html += '<table class="admin-rooms-table">';
+    html += '<thead><tr><th>ชื่อห้องส่งงาน</th><th>สถานะ</th><th>จำนวนงาน</th><th>วันที่สร้าง</th><th>การจัดการ</th></tr></thead>';
+    html += '<tbody>';
+
+    list.forEach(cat => {
+      const statusBadge = cat.isActive
+        ? '<span class="badge badge-success">🟢 เปิดรับ</span>'
+        : '<span class="badge badge-neutral">🔒 ปิดรับ</span>';
+      html += `
+        <tr data-cat-id="${cat.categoryId}">
+          <td>
+            <div class="font-bold">${UIUtils.escapeHtml(cat.title)}</div>
+            <div class="text-xs text-muted">${UIUtils.escapeHtml(cat.description || 'ไม่มีคำอธิบาย')}</div>
+          </td>
+          <td>${statusBadge}</td>
+          <td><span class="badge badge-subtle">🚀 ${cat.submissionCount || 0}</span></td>
+          <td class="text-xs text-muted">${UIUtils.formatDate(cat.createdAt)}</td>
+          <td>
+            <div class="admin-table-action-btns">
+              <button class="btn btn-xs btn-secondary btn-edit-cat-modal" data-id="${cat.categoryId}">✏️ แก้ไข</button>
+              <button class="btn btn-xs btn-danger-solid btn-delete-cat-modal" data-id="${cat.categoryId}" data-count="${cat.submissionCount || 0}" data-title="${UIUtils.escapeHtml(cat.title)}">🗑️ ลบห้องนี้</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+
+    // Bind action buttons inside modal table
+    container.querySelectorAll('.btn-edit-cat-modal').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const cat = list.find(c => c.categoryId === id);
+        if (cat) {
+          this.closeManageRoomsModal();
+          this.openCreateCategoryModal(cat);
+        }
+      });
+    });
+
+    container.querySelectorAll('.btn-delete-cat-modal').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const title = btn.getAttribute('data-title');
+        const count = Number(btn.getAttribute('data-count') || 0);
+        this.deleteCategory(id, title, count);
+      });
+    });
+  },
+
   async handleSaveCategory(e) {
     e.preventDefault();
+    if (this._isSavingCategory) return;
+
     const idInput = document.getElementById('adminCatIdInput');
     const titleInput = document.getElementById('adminCatTitleInput');
     const descInput = document.getElementById('adminCatDescInput');
@@ -285,8 +394,16 @@ const AdminApp = {
       return;
     }
 
+    this._isSavingCategory = true;
     submitBtn.disabled = true;
-    submitBtn.textContent = 'กำลังบันทึก...';
+    submitBtn.textContent = catId ? '⏳ กำลังบันทึกการแก้ไข...' : '⏳ กำลังสร้างโฟลเดอร์ใน Google Drive...';
+
+    // Update status text progressively to keep user informed
+    const stepTimer = setTimeout(() => {
+      if (this._isSavingCategory && submitBtn) {
+        submitBtn.textContent = '💾 กำลังบันทึกหัวข้อลงฐานข้อมูล...';
+      }
+    }, 3500);
 
     try {
       const token = this.getToken();
@@ -299,16 +416,22 @@ const AdminApp = {
         res = await api.createCategory(token, { title, description });
       }
 
+      clearTimeout(stepTimer);
+
       if (res.success) {
         this.closeCategoryModal();
         UIUtils.showToast(res.message || 'บันทึกข้อมูลหัวข้อสำเร็จ', 'success');
-        window.dispatchEvent(new CustomEvent('categoriesUpdated'));
+        window.dispatchEvent(new CustomEvent('categoriesUpdated', {
+          detail: { newCategory: res.data || null, isEdit: !!catId }
+        }));
       } else {
         alert(res.error?.message || 'เกิดข้อผิดพลาดในการบันทึกหัวข้อ');
       }
     } catch (err) {
-      alert('Error: ' + err.message);
+      clearTimeout(stepTimer);
+      alert('เกิดข้อผิดพลาด: ' + err.message);
     } finally {
+      this._isSavingCategory = false;
       submitBtn.disabled = false;
       submitBtn.textContent = 'บันทึก';
     }
@@ -337,19 +460,26 @@ const AdminApp = {
   },
 
   async deleteCategory(categoryId, categoryTitle, currentWorkCount = 0) {
-    let confirmMsg = `⚠️ คุณต้องการลบหัวข้อ "${categoryTitle}" ใช่หรือไม่?`;
+    let confirmMsg = `⚠️ ต้องการลบห้องส่งงาน "${categoryTitle}" ใช่หรือไม่?\n\n📁 ระบบจะนำห้องออกจากหน้าเว็บ และย้ายโฟลเดอร์ใน Google Drive ไปที่ถังขยะ`;
     if (currentWorkCount > 0) {
-      confirmMsg += `\n\nคำเตือน: ในหัวข้อนี้มีผลงานของนักเรียนอยู่ทั้งหมด ${currentWorkCount} ชิ้นงาน!\nเมื่อลบแล้ว หัวข้อและผลงานทั้งหมดจะไม่แสดงในหน้ารวม`;
+      confirmMsg += `\n\nคำเตือน: ในห้องนี้มีผลงานของนักเรียนอยู่ทั้งหมด ${currentWorkCount} ชิ้นงาน!\nเมื่อลบแล้ว ห้องและผลงานทั้งหมดจะไม่แสดงในหน้ารวม`;
     }
 
     if (!confirm(confirmMsg)) return;
 
     try {
+      UIUtils.showToast('กำลังลบห้องและย้ายโฟลเดอร์ Google Drive...', 'info');
       const token = this.getToken();
       const res = await api.deleteCategory(token, categoryId);
       if (res.success) {
-        UIUtils.showToast('ลบหัวข้อเรียบร้อยแล้ว', 'info');
+        UIUtils.showToast(res.message || 'ลบห้องส่งงานและย้ายโฟลเดอร์ Google Drive เรียบร้อยแล้ว', 'success');
         window.dispatchEvent(new CustomEvent('categoryDeleted', { detail: { categoryId } }));
+
+        // Refresh manage rooms modal table if open
+        const modal = document.getElementById('adminManageRoomsModal');
+        if (modal && !modal.classList.contains('hidden')) {
+          this.renderManageRoomsList();
+        }
       } else {
         alert(res.error?.message || 'ไม่สามารถลบหัวข้อได้');
       }

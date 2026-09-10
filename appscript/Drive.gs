@@ -88,10 +88,24 @@ var Drive = (function() {
     }
   }
 
+  /**
+   * Move folder to trash (Safe Delete for Category folder)
+   */
+  function deleteFolder(folderId) {
+    if (!folderId) return;
+    try {
+      var folder = DriveApp.getFolderById(folderId);
+      folder.setTrashed(true);
+    } catch (e) {
+      console.warn('Failed to trash Drive folder ' + folderId + ': ' + e.message);
+    }
+  }
+
   return {
     getRootFolder: getRootFolder,
     createCategoryFolder: createCategoryFolder,
     uploadCoverImage: uploadCoverImage,
-    deleteFile: deleteFile
+    deleteFile: deleteFile,
+    deleteFolder: deleteFolder
   };
 })();

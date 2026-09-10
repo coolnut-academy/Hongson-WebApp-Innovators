@@ -233,10 +233,38 @@ class ApiClient {
     this.apiUrl = APP_CONFIG.API_URL || '';
     this.isMock = !this.apiUrl;
     this._cache = new Map();
+    this.STORAGE_KEY_CATEGORIES = 'ag_cached_categories';
 
     if (this.isMock) {
       console.info('ℹ️ [ApiClient] Running in Phase 1 Mock Mode. Google API_URL is empty.');
       this._initMockStorage();
+    }
+  }
+
+  /* -------------------------------------------------------------
+   * LOCAL STORAGE SWR CACHE HELPERS
+   * ----------------------------------------------------------- */
+
+  getCachedCategories() {
+    try {
+      const raw = localStorage.getItem(this.STORAGE_KEY_CATEGORIES);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {
+      console.warn('Could not read cached categories:', e);
+    }
+    return null;
+  }
+
+  saveCachedCategories(data) {
+    try {
+      if (Array.isArray(data)) {
+        localStorage.setItem(this.STORAGE_KEY_CATEGORIES, JSON.stringify(data));
+      }
+    } catch (e) {
+      console.warn('Could not write categories to localStorage:', e);
     }
   }
 
@@ -267,13 +295,17 @@ class ApiClient {
   clearCache(key = null) {
     if (key) {
       this._cache.delete(key);
+      if (key === 'categories') {
+        try { localStorage.removeItem(this.STORAGE_KEY_CATEGORIES); } catch (e) {}
+      }
     } else {
       this._cache.clear();
+      try { localStorage.removeItem(this.STORAGE_KEY_CATEGORIES); } catch (e) {}
     }
   }
 
   /**
-   * Fetch all active categories (Cached for 30 seconds for instant clicks)
+   * Fetch all active categories (Cached for 60 seconds with persistent storage)
    */
   async getCategories(forceRefresh = false) {
     if (this.isMock) {
@@ -291,14 +323,16 @@ class ApiClient {
     const cached = this._cache.get(cacheKey);
     const now = Date.now();
 
-    // If cached within 30s and not force refresh, return instantly!
-    if (!forceRefresh && cached && (now - cached.timestamp < 30000)) {
+    // If cached in memory within 60s and not force refresh, return instantly!
+    if (!forceRefresh && cached && (now - cached.timestamp < 60000)) {
       return { success: true, data: cached.data, fromCache: true };
     }
 
-    const res = await this._fetchJson(`${this.apiUrl}?action=getCategories`);
+    const url = `${this.apiUrl}?action=getCategories${forceRefresh ? '&forceRefresh=true' : ''}`;
+    const res = await this._fetchJson(url);
     if (res.success && res.data) {
       this._cache.set(cacheKey, { data: res.data, timestamp: now });
+      this.saveCachedCategories(res.data);
     }
     return res;
   }
@@ -504,8 +538,13 @@ class ApiClient {
     }
 
     const res = await this._postJson({ action: 'createCategory', token, title, description });
-    if (res.success) {
-      this.clearCache('categories');
+    if (res.success && res.data) {
+      // Optimistically insert newly created category into local cache
+      let list = this.getCachedCategories() || [];
+      list = list.filter(c => c.categoryId !== res.data.categoryId);
+      list.unshift(res.data);
+      this.saveCachedCategories(list);
+      this._cache.set('categories', { data: list, timestamp: Date.now() });
     }
     return res;
   }
@@ -530,8 +569,14 @@ class ApiClient {
     }
 
     const res = await this._postJson({ action: 'updateCategory', token, categoryId, ...data });
-    if (res.success) {
-      this.clearCache('categories');
+    if (res.success && res.data) {
+      let list = this.getCachedCategories() || [];
+      const idx = list.findIndex(c => c.categoryId === categoryId);
+      if (idx !== -1) {
+        list[idx] = { ...list[idx], ...res.data };
+        this.saveCachedCategories(list);
+        this._cache.set('categories', { data: list, timestamp: Date.now() });
+      }
     }
     return res;
   }
@@ -553,7 +598,10 @@ class ApiClient {
 
     const res = await this._postJson({ action: 'deleteCategory', token, categoryId });
     if (res.success) {
-      this.clearCache();
+      let list = this.getCachedCategories() || [];
+      list = list.filter(c => c.categoryId !== categoryId);
+      this.saveCachedCategories(list);
+      this._cache.set('categories', { data: list, timestamp: Date.now() });
     }
     return res;
   }
@@ -584,40 +632,49 @@ class ApiClient {
    * PRIVATE HTTP & FETCH HELPERS
    * ----------------------------------------------------------- */
 
-  async _fetchJson(url, timeoutMs = 30000) {
+  async _fetchJson(url, timeoutMs = 45000, retryCount = 1) {
     const actionMatch = url.match(/[?&]action=([^&]+)/);
     const action = actionMatch ? decodeURIComponent(actionMatch[1]) : '';
     GlobalLoadingSystem.start(action);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    for (let attempt = 0; attempt <= retryCount; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    try {
-      const res = await fetch(url, { method: 'GET', signal: controller.signal });
-      clearTimeout(timeoutId);
-      GlobalLoadingSystem.done();
-      if (!res.ok) {
-        throw new Error(`HTTP Error: ${res.status} ${res.statusText}`);
+      try {
+        const res = await fetch(url, { method: 'GET', signal: controller.signal });
+        clearTimeout(timeoutId);
+        GlobalLoadingSystem.done();
+        if (!res.ok) {
+          throw new Error(`HTTP Error: ${res.status} ${res.statusText}`);
+        }
+        return await res.json();
+      } catch (err) {
+        clearTimeout(timeoutId);
+        const isLastAttempt = attempt === retryCount;
+        if (!isLastAttempt) {
+          console.warn(`[ApiClient] fetch attempt ${attempt + 1} for ${action || url} failed (${err.name || err.message}). Retrying in 1.2s...`);
+          await new Promise(r => setTimeout(r, 1200));
+          continue;
+        }
+
+        GlobalLoadingSystem.done();
+        console.error('Fetch error:', err);
+        let message = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: ' + err.message;
+        if (err.name === 'AbortError') {
+          message = 'การเชื่อมต่อหมดเวลา (Request Timeout 45s) กรุณากดลองใหม่อีกครั้ง';
+        } else if (err instanceof TypeError && err.message.includes('fetch')) {
+          message = 'ไม่สามารถติดต่อ Google Apps Script ได้ (อาจเกิดจากข้อจำกัด CORS หรือเครือข่ายขัดข้อง)';
+        }
+        return {
+          success: false,
+          error: { code: err.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK_ERROR', message }
+        };
       }
-      return await res.json();
-    } catch (err) {
-      clearTimeout(timeoutId);
-      GlobalLoadingSystem.done();
-      console.error('Fetch error:', err);
-      let message = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: ' + err.message;
-      if (err.name === 'AbortError') {
-        message = 'การเชื่อมต่อหมดเวลา (Request Timeout 30s) กรุณาลองใหม่อีกครั้ง';
-      } else if (err instanceof TypeError && err.message.includes('fetch')) {
-        message = 'ไม่สามารถติดต่อ Google Apps Script ได้ (อาจเกิดจากข้อจำกัด CORS หรืออินเทอร์เน็ตขัดข้อง)';
-      }
-      return {
-        success: false,
-        error: { code: err.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK_ERROR', message }
-      };
     }
   }
 
-  async _postJson(payload, timeoutMs = 35000) {
+  async _postJson(payload, timeoutMs = 60000) {
     GlobalLoadingSystem.start(payload.action || 'post');
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -644,9 +701,9 @@ class ApiClient {
       console.error('Post error:', err);
       let message = 'เกิดข้อผิดพลาดในการส่งข้อมูล: ' + err.message;
       if (err.name === 'AbortError') {
-        message = 'การส่งข้อมูลหมดเวลา (Request Timeout) กรุณาลองใหม่อีกครั้ง';
+        message = 'การส่งข้อมูลหมดเวลา (Request Timeout 60s) ระบบ Google Apps Script อาจกำลังประมวลผล กรุณารอสักครู่แล้วตรวจสอบผล';
       } else if (err instanceof TypeError && err.message.includes('fetch')) {
-        message = 'ไม่สามารถส่งข้อมูลไปยัง Google Apps Script ได้ กรุณาตรวจสอบการตั้งค่า URL';
+        message = 'ไม่สามารถส่งข้อมูลไปยัง Google Apps Script ได้ กรุณาตรวจสอบการตั้งค่า URL หรือสัญญาณอินเทอร์เน็ต';
       }
       return {
         success: false,
@@ -948,3 +1005,6 @@ class ApiClient {
 
 // Global API instance
 const api = new ApiClient();
+if (typeof window !== 'undefined') {
+  window.api = api;
+}

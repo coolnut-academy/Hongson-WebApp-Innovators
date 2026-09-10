@@ -46,7 +46,8 @@ function doGet(e) {
         return Utils.buildSuccessResponse(setupResult, 'Database initialized successfully');
 
       case 'getCategories':
-        var categories = Categories.getAll();
+        var force = e.parameter.forceRefresh === 'true' || e.parameter.forceRefresh === '1';
+        var categories = Categories.getAll(force);
         return Utils.buildSuccessResponse(categories);
 
       case 'getCategory':
@@ -125,7 +126,7 @@ function doPost(e) {
 
       case 'deleteCategory':
         var deleteCatResult = Categories.remove(payload.token, payload.categoryId);
-        return Utils.buildSuccessResponse(deleteCatResult, 'ลบหัวข้อเรียบร้อยแล้ว');
+        return Utils.buildSuccessResponse(deleteCatResult, deleteCatResult.message || 'ลบหัวข้อเรียบร้อยแล้ว');
 
       case 'deleteSubmission':
         var deleteSubResult = Submissions.remove(payload.token, payload.submissionId);

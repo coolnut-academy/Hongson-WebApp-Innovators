@@ -4,14 +4,19 @@
  */
 
 var Sheets = (function() {
+  var _cachedSs = null;
 
   function getSpreadsheet() {
+    if (_cachedSs) {
+      return _cachedSs;
+    }
     var ssId = Config.getSpreadsheetId();
     if (!ssId) {
       throw new Error('ยังไม่ได้ระบุ SPREADSHEET_ID ใน Script Properties (ไปที่ไอคอนฟันเฟือง Project Settings ➔ Script Properties)');
     }
     try {
-      return SpreadsheetApp.openById(ssId);
+      _cachedSs = SpreadsheetApp.openById(ssId);
+      return _cachedSs;
     } catch (e) {
       throw new Error('ไม่สามารถเปิด Google Spreadsheet ได้ (ID: ' + ssId + ') ตรวจสอบว่า ID ถูกต้องและบัญชีนี้มีสิทธิ์เข้าถึง: ' + e.message);
     }

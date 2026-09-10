@@ -77,9 +77,8 @@ var Utils = (function() {
    */
   function logAdminAction(action, targetType, targetId, detail) {
     try {
-      var ssId = Config.getSpreadsheetId();
-      if (!ssId) return;
-      var ss = SpreadsheetApp.openById(ssId);
+      var ss = Sheets.getSpreadsheet();
+      if (!ss) return;
       var logSheet = ss.getSheetByName(Config.SHEET_ADMIN_LOG);
       if (!logSheet) return;
 

@@ -446,7 +446,13 @@ const App = {
     // Start progress loading immediately on home view if category is not in URL
     const params = new URLSearchParams(window.location.search);
     if (!params.get('category')) {
-      PageLoadingManager.startCategoriesLoading();
+      const cached = api.getCachedCategories();
+      if (cached && cached.length > 0) {
+        this.allCategories = cached;
+        this.renderCategories();
+      } else {
+        PageLoadingManager.startCategoriesLoading();
+      }
     }
 
     this.handleRoute();
@@ -454,12 +460,29 @@ const App = {
 
     // Listen to custom admin events
     window.addEventListener('adminStateChanged', () => this.refreshCurrentView());
-    window.addEventListener('categoriesUpdated', () => this.loadCategories());
+    window.addEventListener('categoriesUpdated', (e) => {
+      if (e.detail?.newCategory) {
+        const newCat = e.detail.newCategory;
+        if (!this.allCategories) this.allCategories = [];
+        this.allCategories = this.allCategories.filter(c => c.categoryId !== newCat.categoryId);
+        this.allCategories.unshift(newCat);
+        this.renderCategories();
+      }
+      this.loadCategories(true);
+    });
     window.addEventListener('categoryDeleted', (e) => {
-      if (this.currentCategoryId === e.detail?.categoryId) {
+      const delId = e.detail?.categoryId;
+      if (delId) {
+        if (this.allCategories) {
+          this.allCategories = this.allCategories.filter(c => c.categoryId !== delId);
+          api.saveCachedCategories(this.allCategories);
+          this.renderCategories();
+        }
+      }
+      if (this.currentCategoryId === delId) {
         this.navigateToHome();
       } else {
-        this.loadCategories();
+        this.loadCategories(true);
       }
     });
     window.addEventListener('submissionsUpdated', () => {
@@ -596,7 +619,7 @@ const App = {
    * HOME VIEW: CATEGORIES
    * ----------------------------------------------------------- */
 
-  async loadCategories() {
+  async loadCategories(forceRefresh = false) {
     this.currentCategoryId = null;
     const homeView = document.getElementById('homeView');
     const categoryDetailView = document.getElementById('categoryDetailView');
@@ -606,23 +629,43 @@ const App = {
     if (homeView) homeView.classList.remove('hidden');
     if (categoryDetailView) categoryDetailView.classList.add('hidden');
     if (emptyState) emptyState.classList.add('hidden');
-    if (container) container.innerHTML = '';
 
-    PageLoadingManager.startCategoriesLoading();
+    // Instant SWR check: render cached categories immediately if we don't already have them
+    const cached = api.getCachedCategories();
+    const hasCachedData = (this.allCategories && this.allCategories.length > 0) || (cached && cached.length > 0);
+
+    if ((!this.allCategories || this.allCategories.length === 0) && cached && cached.length > 0) {
+      this.allCategories = cached;
+      this.renderCategories();
+    }
+
+    // Only show full blocking progress card if we have zero cached items
+    if (!hasCachedData) {
+      if (container) container.innerHTML = '';
+      PageLoadingManager.startCategoriesLoading();
+    }
 
     try {
-      const res = await api.getCategories();
+      const res = await api.getCategories(forceRefresh);
       if (res.success) {
         this.allCategories = res.data || [];
-        PageLoadingManager.finishCategoriesLoading(() => {
+        if (!hasCachedData) {
+          PageLoadingManager.finishCategoriesLoading(() => {
+            this.renderCategories();
+          });
+        } else {
           this.renderCategories();
-        });
+        }
       } else {
-        PageLoadingManager.failCategories(res.error?.message || 'ไม่สามารถโหลดข้อมูลหัวข้อได้');
+        if (!hasCachedData) {
+          PageLoadingManager.failCategories(res.error?.message || 'ไม่สามารถโหลดข้อมูลหัวข้อได้');
+        }
         UIUtils.showToast(res.error?.message || 'ไม่สามารถโหลดข้อมูลหัวข้อได้', 'error');
       }
     } catch (err) {
-      PageLoadingManager.failCategories(err.message);
+      if (!hasCachedData) {
+        PageLoadingManager.failCategories(err.message);
+      }
       UIUtils.showToast('เกิดข้อผิดพลาดในการโหลดหัวข้อ: ' + err.message, 'error');
     }
   },
@@ -672,6 +715,13 @@ const App = {
         </div>
         <h3 class="cat-card-title">${UIUtils.escapeHtml(cat.title)}</h3>
         <p class="cat-card-desc">${UIUtils.escapeHtml(cat.description || 'ไม่มีคำอธิบายเพิ่มเติม')}</p>
+        ${isAdmin ? `
+          <div class="cat-card-admin-bar" onclick="event.stopPropagation()">
+            <button class="btn btn-xs btn-secondary btn-edit-cat" data-id="${cat.categoryId}" title="แก้ไขหัวข้อ">✏️ แก้ไข</button>
+            <button class="btn btn-xs btn-secondary btn-toggle-status" data-id="${cat.categoryId}" data-active="${cat.isActive}">${cat.isActive ? '🔒 ปิดรับ' : '🟢 เปิดรับ'}</button>
+            <button class="btn btn-xs btn-danger-solid btn-delete-cat" data-id="${cat.categoryId}" data-count="${cat.submissionCount || 0}" data-title="${UIUtils.escapeHtml(cat.title)}" title="ลบห้องนี้และย้ายโฟลเดอร์ Google Drive ไปที่ถังขยะ">🗑️ ลบห้องนี้</button>
+          </div>
+        ` : ''}
         <div class="cat-card-footer">
           <span class="cat-card-date">สร้างเมื่อ ${UIUtils.formatDate(cat.createdAt)}</span>
           <span class="cat-card-action">เข้าชมผลงาน &rarr;</span>
@@ -680,8 +730,8 @@ const App = {
 
       // Click card to open category detail
       card.addEventListener('click', (e) => {
-        // Prevent if clicked admin dropdown
-        if (e.target.closest('.cat-admin-dropdown')) return;
+        // Prevent if clicked admin dropdown or admin buttons
+        if (e.target.closest('.cat-admin-dropdown') || e.target.closest('.cat-card-admin-bar')) return;
         this.navigateToCategory(cat.categoryId);
       });
 

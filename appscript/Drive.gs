@@ -40,7 +40,11 @@ var Drive = (function() {
     }
 
     var folder = DriveApp.getFolderById(categoryFolderId);
-    var bytes = Utilities.base64Decode(base64Data);
+    var cleanBase64 = String(base64Data);
+    if (cleanBase64.indexOf(';base64,') !== -1) {
+      cleanBase64 = cleanBase64.split(';base64,')[1];
+    }
+    var bytes = Utilities.base64Decode(cleanBase64);
     
     // Normalize filename
     var cleanName = (originalName || 'cover.webp').replace(/[/\\?%*:|"<>]/g, '_');

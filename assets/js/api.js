@@ -418,8 +418,16 @@ class ApiClient {
       };
     }
 
-    GlobalProgressBar.start();
-    const res = await this._postJsonWithProgress({ action: 'submitWork', ...payload }, onProgress);
+    GlobalProgressBar.start('submitWork');
+    // Optimize network payload: remove coverDataUrl since Apps Script only requires coverBase64
+    const networkPayload = { action: 'submitWork', ...payload };
+    if (networkPayload.coverBase64) {
+      if (typeof networkPayload.coverBase64 === 'string' && networkPayload.coverBase64.includes(';base64,')) {
+        networkPayload.coverBase64 = networkPayload.coverBase64.split(';base64,')[1];
+      }
+      delete networkPayload.coverDataUrl;
+    }
+    const res = await this._postJsonWithProgress(networkPayload, onProgress);
     GlobalProgressBar.done();
     if (res.success) {
       this.clearCache('submissions_' + payload.categoryId);
@@ -621,6 +629,7 @@ class ApiClient {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload),
+        redirect: 'follow',
         signal: controller.signal
       });
       clearTimeout(timeoutId);
@@ -647,100 +656,98 @@ class ApiClient {
   }
 
   /**
-   * Post JSON with Real-Time Upload Progress (using XMLHttpRequest)
+   * Post JSON with Real-Time Staged Progress using Fetch API
+   * Standard CORS Simple Request without XMLHttpRequest upload listeners
+   * (Google Apps Script Web App does not support HTTP OPTIONS preflight requests)
    */
-  _postJsonWithProgress(payload, onProgress, timeoutMs = 60000) {
+  async _postJsonWithProgress(payload, onProgress, timeoutMs = 60000) {
     GlobalLoadingSystem.start(payload.action || 'submitWork');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    return new Promise((resolve) => {
-      const xhr = new XMLHttpRequest();
-      let timedOut = false;
-      const timeoutId = setTimeout(() => {
-        timedOut = true;
-        xhr.abort();
-      }, timeoutMs);
+    let progressTimer = null;
+    let currentPercent = 20;
 
-      if (onProgress) {
-        onProgress({ stage: 'uploading', percent: 15, detail: 'กำลังเชื่อมต่อเซิร์ฟเวอร์ Google Apps Script...' });
-      }
+    if (onProgress) {
+      onProgress({ stage: 'uploading', percent: 20, detail: 'กำลังเชื่อมต่อและนำส่งข้อมูลผลงาน...' });
+    }
+    GlobalLoadingSystem.setProgress(20);
 
-      // Track byte upload
-      xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable) {
-          // Map network upload to 15% - 65% of overall process
-          const ratio = e.loaded / e.total;
-          const currentPct = Math.round(15 + ratio * 50);
-          GlobalLoadingSystem.setProgress(currentPct);
-          if (onProgress) {
-            onProgress({
-              stage: 'uploading',
-              percent: Math.min(65, currentPct),
-              detail: `กำลังอัปโหลดไฟล์และข้อมูลไปยังเซิร์ฟเวอร์ (${Math.round(ratio * 100)}%)...`
-            });
-          }
+    // Smooth progressive stage animation while network request is processed by Google Apps Script
+    progressTimer = setInterval(() => {
+      if (currentPercent < 55) {
+        currentPercent += 5;
+        GlobalLoadingSystem.setProgress(currentPercent);
+        if (onProgress) {
+          onProgress({
+            stage: 'uploading',
+            percent: currentPercent,
+            detail: `กำลังอัปโหลดไฟล์ภาพและส่งข้อมูลเข้าสู่ระบบ (${currentPercent}%)...`
+          });
         }
-      });
-
-      // Byte upload completed, now server processing
-      xhr.upload.addEventListener('load', () => {
-        GlobalLoadingSystem.setProgress(70, 'กำลังบันทึกภาพลง Google Drive และเขียนข้อมูลลง Google Sheets...');
+      } else if (currentPercent < 88) {
+        currentPercent += 3;
+        GlobalLoadingSystem.setProgress(currentPercent);
         if (onProgress) {
           onProgress({
             stage: 'processing',
-            percent: 70,
+            percent: currentPercent,
             detail: 'กำลังบันทึกภาพลง Google Drive และเขียนข้อมูลลง Google Sheets...'
           });
         }
+      }
+    }, 280);
+
+    try {
+      // POST to Apps Script Web App using fetch and text/plain (CORS Simple Request)
+      const res = await fetch(this.apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+        redirect: 'follow',
+        signal: controller.signal
       });
 
-      xhr.onreadystatechange = () => {
-        if (xhr.readyState === XMLHttpRequest.DONE) {
-          clearTimeout(timeoutId);
-          GlobalLoadingSystem.done();
+      clearInterval(progressTimer);
+      clearTimeout(timeoutId);
 
-          if (timedOut) {
-            resolve({
-              success: false,
-              error: { code: 'TIMEOUT', message: 'การส่งข้อมูลหมดเวลา (Timeout 60s) กรุณาลองใหม่อีกครั้ง' }
-            });
-            return;
-          }
+      if (!res.ok) {
+        throw new Error(`HTTP Error: ${res.status} ${res.statusText}`);
+      }
 
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const data = JSON.parse(xhr.responseText);
-              if (onProgress) {
-                onProgress({ stage: 'completed', percent: 100, detail: 'ส่งผลงานและบันทึกข้อมูลเรียบร้อยแล้ว!' });
-              }
-              resolve(data);
-            } catch (err) {
-              resolve({
-                success: false,
-                error: { code: 'PARSE_ERROR', message: 'ไม่สามารถอ่านผลตอบรับจากเซิร์ฟเวอร์ได้: ' + err.message }
-              });
-            }
-          } else {
-            resolve({
-              success: false,
-              error: { code: 'HTTP_ERROR', message: `เซิร์ฟเวอร์ตอบกลับผิดพลาด: ${xhr.status}` }
-            });
-          }
-        }
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (parseErr) {
+        throw new Error('ไม่สามารถแปลงข้อมูลที่เซิร์ฟเวอร์ตอบกลับได้: ' + text.substring(0, 120));
+      }
+
+      GlobalLoadingSystem.setProgress(100);
+      if (onProgress) {
+        onProgress({ stage: 'completed', percent: 100, detail: 'ส่งผลงานและบันทึกข้อมูลเรียบร้อยแล้ว!' });
+      }
+      GlobalLoadingSystem.done();
+
+      return data;
+    } catch (err) {
+      clearInterval(progressTimer);
+      clearTimeout(timeoutId);
+      GlobalLoadingSystem.done();
+      console.error('SubmitWork error:', err);
+
+      let message = 'เกิดข้อผิดพลาดในการส่งข้อมูล: ' + err.message;
+      if (err.name === 'AbortError') {
+        message = 'การส่งผลงานหมดเวลา (Request Timeout 60s) กรุณาตรวจสอบสัญญาณอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง';
+      } else if (err instanceof TypeError && err.message.includes('fetch')) {
+        message = 'ไม่สามารถเชื่อมต่อ Google Apps Script ได้ (กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต)';
+      }
+
+      return {
+        success: false,
+        error: { code: err.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK_ERROR', message }
       };
-
-      xhr.onerror = () => {
-        clearTimeout(timeoutId);
-        GlobalLoadingSystem.done();
-        resolve({
-          success: false,
-          error: { code: 'NETWORK_ERROR', message: 'ไม่สามารถเชื่อมต่อ Google Apps Script ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต' }
-        });
-      };
-
-      xhr.open('POST', this.apiUrl, true);
-      xhr.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
-      xhr.send(JSON.stringify(payload));
-    });
+    }
   }
 
   /* -------------------------------------------------------------

@@ -1,25 +1,29 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hongson Student Innovators — ศูนย์รวมเว็บแอปพลิเคชันและผลงานนักเรียน</title>
-  <meta name="description" content="แพลตฟอร์มรวบรวมและจัดแสดงผลงาน Web App ของนักเรียน (เช่น เกมการเรียนรู้, แอพสุขภาพ, แอพคำนวณต่าง ๆ) พร้อมระบบส่งผลงานและตรวจสอบการส่งงาน">
-  
+  <meta name="description"
+    content="แพลตฟอร์มรวบรวมและจัดแสดงผลงาน Web App ของนักเรียน (เช่น เกมการเรียนรู้, แอพสุขภาพ, แอพคำนวณต่าง ๆ) พร้อมระบบส่งผลงานและตรวจสอบการส่งงาน">
+
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="assets/images/logo.png">
-  
+
   <!-- Google Fonts Preconnect -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  
+
   <!-- Core Stylesheet -->
   <link rel="stylesheet" href="assets/css/styles.css?v=1.0.2">
 </head>
+
 <body>
 
   <!-- Top Global Progress Bar for Network Requests -->
-  <div id="globalProgressBar" class="global-progress-bar hidden" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+  <div id="globalProgressBar" class="global-progress-bar hidden" role="progressbar" aria-valuenow="0" aria-valuemin="0"
+    aria-valuemax="100">
     <div id="globalProgressBarFill" class="global-progress-bar-fill"></div>
   </div>
 
@@ -75,8 +79,10 @@
               <span class="sync-icon">☁️</span>
             </div>
             <div class="sync-text-group">
-              <div class="sync-title" id="syncBannerTitle">กำลังดาวน์โหลดข้อมูลจาก Google Sheets และ Google Drive...</div>
-              <div class="sync-subtitle" id="syncBannerSubtitle">เชื่อมต่อฐานข้อมูล Google Apps Script เพื่อดึงข้อมูลล่าสุด</div>
+              <div class="sync-title" id="syncBannerTitle">กำลังดาวน์โหลดข้อมูลจาก Google Sheets และ Google Drive...
+              </div>
+              <div class="sync-subtitle" id="syncBannerSubtitle">เชื่อมต่อฐานข้อมูล Google Apps Script
+                เพื่อดึงข้อมูลล่าสุด</div>
             </div>
           </div>
           <div class="sync-percent-box">
@@ -87,7 +93,8 @@
           <div id="syncBannerFill" class="sync-progress-bar-fill animated-stripes" style="width: 20%;"></div>
         </div>
         <div class="sync-banner-tip">
-          <span>💡 ระบบกำลังดึงข้อมูลล่าสุดจาก Google Sheets และ Google Drive กรุณารอสักครู่ <strong>ไม่จำเป็นต้องกดรีเฟรชหน้าเว็บ (F5)</strong></span>
+          <span>💡 ระบบกำลังดึงข้อมูลล่าสุดจาก Google Sheets และ Google Drive กรุณารอสักครู่
+            <strong>ไม่จำเป็นต้องกดรีเฟรชหน้าเว็บ (F5)</strong></span>
         </div>
       </div>
     </div>
@@ -115,7 +122,8 @@
             <span class="hero-title-gradient">Hongson Student Innovators</span>
           </h1>
           <p class="hero-subtitle">
-            พื้นที่แสดงศักยภาพและความคิดสร้างสรรค์ของนักเรียน รวบรวม Web App ทุกรูปแบบ เช่น เกมการเรียนรู้, แอพสุขภาพ, แอพคำนวณต่าง ๆ และสื่อนวัตกรรมดิจิทัล ร่วมทดลองใช้งานและส่งผลงานได้ที่นี่
+            พื้นที่แสดงศักยภาพและความคิดสร้างสรรค์ของนักเรียน รวบรวม Web App ทุกรูปแบบ เช่น เกมการเรียนรู้, แอพสุขภาพ,
+            แอพคำนวณต่าง ๆ และสื่อนวัตกรรมดิจิทัล ร่วมทดลองใช้งานและส่งผลงานได้ที่นี่
           </p>
         </div>
       </section>
@@ -148,7 +156,8 @@
               <div id="categoriesProgressBarFill" class="progress-bar-fill animated-stripes" style="width: 20%;"></div>
             </div>
             <div class="progress-card-footer">
-              <span class="progress-card-hint">💡 ระบบกำลังดึงข้อมูลล่าสุดจาก Google Sheets กรุณารอสักครู่ ไม่จำเป็นต้องกดรีเฟรชหน้าเว็บ (F5)</span>
+              <span class="progress-card-hint">💡 ระบบกำลังดึงข้อมูลล่าสุดจาก Google Sheets กรุณารอสักครู่
+                ไม่จำเป็นต้องกดรีเฟรชหน้าเว็บ (F5)</span>
             </div>
           </div>
 
@@ -177,7 +186,7 @@
     <!-- ============================================================== -->
     <section id="categoryDetailView" class="view-container category-detail-section hidden">
       <div class="container">
-        
+
         <!-- Navigation Back Bar -->
         <div class="detail-nav-bar">
           <button id="backToHomeBtn" class="btn btn-secondary">
@@ -210,13 +219,9 @@
         <div class="gallery-toolbar">
           <div class="search-input-wrap">
             <span class="search-icon">🔍</span>
-            <input 
-              type="text" 
-              id="gallerySearchInput" 
-              class="search-input" 
-              placeholder="ค้นหาตามชื่อผลงาน, เว็บแอป, ชื่อผู้สร้าง, เลขที่, หรือชั้น..." 
-              aria-label="ค้นหาผลงานเว็บแอป"
-            >
+            <input type="text" id="gallerySearchInput" class="search-input"
+              placeholder="ค้นหาตามชื่อผลงาน, เว็บแอป, ชื่อผู้สร้าง, เลขที่, หรือชั้น..."
+              aria-label="ค้นหาผลงานเว็บแอป">
           </div>
           <div class="sort-select-wrap">
             <label for="gallerySortSelect" class="text-sm font-medium text-muted">เรียงตาม:</label>
@@ -236,7 +241,8 @@
             </div>
             <div class="progress-card-info">
               <h3 class="progress-card-title">กำลังโหลดผลงานเว็บแอปและรูปภาพจาก Google Drive</h3>
-              <p id="submissionsProgressStageText" class="progress-card-stage">กำลังเชื่อมต่อฐานข้อมูล Google Sheets & Google Drive...</p>
+              <p id="submissionsProgressStageText" class="progress-card-stage">กำลังเชื่อมต่อฐานข้อมูล Google Sheets &
+                Google Drive...</p>
             </div>
             <div class="progress-card-percent-badge">
               <span id="submissionsProgressPercent">0</span>%
@@ -246,7 +252,8 @@
             <div id="submissionsProgressBarFill" class="progress-bar-fill" style="width: 0%;"></div>
           </div>
           <div class="progress-card-footer">
-            <span class="progress-card-hint">💡 กำลังซิงค์ข้อมูลผลงานล่าสุด กรุณารอสักครู่ ไม่จำเป็นต้องกดรีเฟรชหน้าเว็บ ระบบกำลังจัดเตรียมข้อมูลให้คุณอัตโนมัติ</span>
+            <span class="progress-card-hint">💡 กำลังซิงค์ข้อมูลผลงานล่าสุด กรุณารอสักครู่ ไม่จำเป็นต้องกดรีเฟรชหน้าเว็บ
+              ระบบกำลังจัดเตรียมข้อมูลให้คุณอัตโนมัติ</span>
           </div>
         </div>
 
@@ -305,7 +312,8 @@
   <!-- ============================================================== -->
   <!-- MODAL: STUDENT SUBMISSION                                      -->
   <!-- ============================================================== -->
-  <div id="submissionModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="submitModalTitle">
+  <div id="submissionModal" class="modal-backdrop hidden" role="dialog" aria-modal="true"
+    aria-labelledby="submitModalTitle">
     <div class="modal-dialog">
       <div class="modal-header">
         <h3 id="submitModalTitle" class="modal-title">🚀 ส่งผลงาน Web App นักเรียน</h3>
@@ -313,15 +321,17 @@
       </div>
 
       <!-- Submission Progress Overlay (shown during submit) -->
-      <div id="submissionProgressOverlay" class="submission-progress-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="submissionProgressTitle">
+      <div id="submissionProgressOverlay" class="submission-progress-overlay hidden" role="dialog" aria-modal="true"
+        aria-labelledby="submissionProgressTitle">
         <div class="submission-progress-box">
           <div class="submission-progress-rocket">
             <div class="rocket-icon-pulse">🚀</div>
             <div class="rocket-orbit-ring"></div>
           </div>
           <h3 id="submissionProgressTitle" class="submission-progress-title">กำลังส่งผลงานของคุณเข้าสู่ระบบ...</h3>
-          <p id="submissionProgressSubtitle" class="submission-progress-subtitle">ระบบกำลังนำส่งผลงานไปยัง Google Drive และบันทึกลง Google Sheets</p>
-          
+          <p id="submissionProgressSubtitle" class="submission-progress-subtitle">ระบบกำลังนำส่งผลงานไปยัง Google Drive
+            และบันทึกลง Google Sheets</p>
+
           <!-- Big Percentage Counter -->
           <div class="submission-percent-wrap">
             <span id="submissionPercentNumber" class="submission-percent-number">0</span>
@@ -387,11 +397,13 @@
           </div>
 
           <!-- Honeypot Field for anti-spam bot protection -->
-          <input type="text" id="inputHoneypot" class="honeypot-field" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <input type="text" id="inputHoneypot" class="honeypot-field" tabindex="-1" autocomplete="off"
+            aria-hidden="true">
 
           <div class="form-group">
             <label for="inputStudentName" class="form-label">ชื่อ-นามสกุล <span class="required">*</span></label>
-            <input type="text" id="inputStudentName" class="form-control" placeholder="เช่น ด.ช.สมชาย รักเรียน" required>
+            <input type="text" id="inputStudentName" class="form-control" placeholder="เช่น ด.ช.สมชาย รักเรียน"
+              required>
           </div>
 
           <div class="form-row-2">
@@ -402,33 +414,42 @@
             </div>
             <div class="form-group">
               <label for="inputStudentNo" class="form-label">เลขที่ <span class="required">*</span></label>
-              <input type="number" id="inputStudentNo" class="form-control font-mono" min="1" max="99" placeholder="เช่น 5" required>
+              <input type="number" id="inputStudentNo" class="form-control font-mono" min="1" max="99"
+                placeholder="เช่น 5" required>
             </div>
           </div>
 
           <div class="form-group">
-            <label for="inputStudyProgram" class="form-label">สายการเรียน / แผนการเรียน <span class="required">*</span></label>
-            <input type="text" id="inputStudyProgram" class="form-control" placeholder="เช่น ศิลป์-จีน, วิทย์-คอมฯ, วิทย์สุขภาพ" required>
+            <label for="inputStudyProgram" class="form-label">สายการเรียน / แผนการเรียน <span
+                class="required">*</span></label>
+            <input type="text" id="inputStudyProgram" class="form-control"
+              placeholder="เช่น ศิลป์-จีน, วิทย์-คอมฯ, วิทย์สุขภาพ" required>
             <div class="form-help">พิมพ์สายการเรียนของคุณอย่างอิสระ</div>
           </div>
 
           <div class="form-group">
-            <label for="inputWorkTitle" class="form-label">ชื่อผลงาน / ชื่อเว็บแอป <span class="required">*</span></label>
-            <input type="text" id="inputWorkTitle" class="form-control" placeholder="เช่น แอพคำนวณแคลอรีสุขภาพ, เกมระบบสุริยะ, เครื่องคิดเลขวิทยาศาสตร์" required>
+            <label for="inputWorkTitle" class="form-label">ชื่อผลงาน / ชื่อเว็บแอป <span
+                class="required">*</span></label>
+            <input type="text" id="inputWorkTitle" class="form-control"
+              placeholder="เช่น แอพคำนวณแคลอรีสุขภาพ, เกมระบบสุริยะ, เครื่องคิดเลขวิทยาศาสตร์" required>
           </div>
 
           <div class="form-group">
-            <label for="inputWorkUrl" class="form-label">URL ผลงาน / ลิงก์เว็บแอป <span class="required">*</span></label>
-            <input type="text" id="inputWorkUrl" class="form-control" placeholder="เช่น https://... หรือ www.mywebapp.com" autocomplete="url" required>
+            <label for="inputWorkUrl" class="form-label">URL ผลงาน / ลิงก์เว็บแอป <span
+                class="required">*</span></label>
+            <input type="text" id="inputWorkUrl" class="form-control"
+              placeholder="เช่น https://... หรือ www.mywebapp.com" autocomplete="url" required>
             <div class="form-help">รองรับทุกลิงก์ (ระบบจะเติม https:// ให้อัตโนมัติหากไม่ได้ระบุ)</div>
           </div>
 
           <div class="form-group">
-            <label class="form-label">ภาพหน้าปกผลงาน / ตัวอย่างหน้าจอเว็บแอป (Cover / Screenshot) <span class="required">*</span></label>
+            <label class="form-label">ภาพหน้าปกผลงาน / ตัวอย่างหน้าจอเว็บแอป (Cover / Screenshot) <span
+                class="required">*</span></label>
             <label class="cover-upload-box" for="submitCoverInput">
               <div id="uploadBoxLabel">📸 คลิกเพื่อเลือกรูปภาพหน้าปก / ภาพตัวอย่างเว็บแอป</div>
               <div class="form-help">รองรับไฟล์ JPEG, PNG, WEBP (ระบบจะย่อขนาดให้อัตโนมัติ)</div>
-              <input type="file" id="submitCoverInput" accept="image/jpeg,image/png,image/webp" style="display:none;" required>
+              <input type="file" id="submitCoverInput" accept="image/jpeg,image/png,image/webp" style="display:none;"
+                required>
             </label>
             <div id="coverPreviewContainer" class="hidden">
               <div class="cover-preview-wrapper">
@@ -451,7 +472,8 @@
   <!-- ============================================================== -->
   <!-- MODAL: ADMIN LOGIN                                             -->
   <!-- ============================================================== -->
-  <div id="adminLoginModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="adminLoginTitle">
+  <div id="adminLoginModal" class="modal-backdrop hidden" role="dialog" aria-modal="true"
+    aria-labelledby="adminLoginTitle">
     <div class="modal-dialog" style="max-width: 420px;">
       <div class="modal-header">
         <h3 id="adminLoginTitle" class="modal-title">🔐 เข้าสู่ระบบผู้ดูแลระบบ</h3>
@@ -461,8 +483,9 @@
         <div class="modal-body">
           <div class="form-group">
             <label for="adminPasswordInput" class="form-label">รหัสผ่านผู้ดูแลระบบ (Admin Password):</label>
-            <input type="password" id="adminPasswordInput" class="form-control" placeholder="กรอกรหัสผ่าน..." autocomplete="current-password" required>
-            <div class="form-help">ในโหมด Prototype Phase 1 ใช้รหัส: <code>admin1234</code></div>
+            <input type="password" id="adminPasswordInput" class="form-control" placeholder="กรอกรหัสผ่าน..."
+              autocomplete="current-password" required>
+            <div class="form-help">Password Admin<code>g_ratio</code></div>
             <div id="adminLoginError" class="text-danger text-sm" style="margin-top:0.5rem;"></div>
 
             <!-- Admin Login Progress Indicator -->
@@ -488,7 +511,8 @@
   <!-- ============================================================== -->
   <!-- MODAL: ADMIN CREATE / EDIT CATEGORY                            -->
   <!-- ============================================================== -->
-  <div id="adminCategoryModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="adminCategoryModalTitle">
+  <div id="adminCategoryModal" class="modal-backdrop hidden" role="dialog" aria-modal="true"
+    aria-labelledby="adminCategoryModalTitle">
     <div class="modal-dialog">
       <div class="modal-header">
         <h3 id="adminCategoryModalTitle" class="modal-title">➕ สร้างหัวข้อการส่งงานใหม่</h3>
@@ -498,12 +522,15 @@
         <div class="modal-body">
           <input type="hidden" id="adminCatIdInput">
           <div class="form-group">
-            <label for="adminCatTitleInput" class="form-label">ชื่อหัวข้อการส่งงาน <span class="required">*</span></label>
-            <input type="text" id="adminCatTitleInput" class="form-control" placeholder="เช่น โครงงานเว็บแอปสุขภาพ ม.4/2 หรือ นวัตกรรม AI เพื่อการเรียนรู้" required>
+            <label for="adminCatTitleInput" class="form-label">ชื่อหัวข้อการส่งงาน <span
+                class="required">*</span></label>
+            <input type="text" id="adminCatTitleInput" class="form-control"
+              placeholder="เช่น โครงงานเว็บแอปสุขภาพ ม.4/2 หรือ นวัตกรรม AI เพื่อการเรียนรู้" required>
           </div>
           <div class="form-group">
             <label for="adminCatDescInput" class="form-label">คำอธิบายรายละเอียด:</label>
-            <textarea id="adminCatDescInput" class="form-control" rows="3" placeholder="ระบุวัตถุประสงค์ เกณฑ์การส่งผลงาน หรือประเภท Web App ที่เปิดรับ..."></textarea>
+            <textarea id="adminCatDescInput" class="form-control" rows="3"
+              placeholder="ระบุวัตถุประสงค์ เกณฑ์การส่งผลงาน หรือประเภท Web App ที่เปิดรับ..."></textarea>
           </div>
         </div>
         <div class="modal-footer">
@@ -548,4 +575,5 @@
   <script src="assets/js/admin.js?v=1.0.2"></script>
   <script src="assets/js/app.js?v=1.0.2"></script>
 </body>
+
 </html>

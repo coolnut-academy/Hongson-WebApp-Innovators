@@ -68,12 +68,20 @@ const UIUtils = {
 const PageLoadingManager = {
   catTimer: null,
   subTimer: null,
-  catPercent: 0,
-  subPercent: 0,
+  catPercent: 20,
+  subPercent: 20,
+  startTime: 0,
 
   startCategoriesLoading() {
     clearInterval(this.catTimer);
-    this.catPercent = 15;
+    this.catPercent = 20;
+    this.startTime = Date.now();
+
+    const banner = document.getElementById('globalDataSyncBanner');
+    const bannerTitle = document.getElementById('syncBannerTitle');
+    const bannerSubtitle = document.getElementById('syncBannerSubtitle');
+    const bannerPercent = document.getElementById('syncBannerPercent');
+    const bannerFill = document.getElementById('syncBannerFill');
 
     const progressCard = document.getElementById('categoriesLoadingProgress');
     const skeleton = document.getElementById('categoriesLoadingSkeleton');
@@ -81,59 +89,106 @@ const PageLoadingManager = {
     const fillEl = document.getElementById('categoriesProgressBarFill');
     const stageEl = document.getElementById('categoriesProgressStageText');
 
+    if (banner) banner.classList.remove('hidden');
+    if (bannerTitle) bannerTitle.textContent = 'กำลังดาวน์โหลดข้อมูลหัวข้อจาก Google Sheets...';
+    if (bannerSubtitle) bannerSubtitle.textContent = 'เชื่อมต่อฐานข้อมูล Google Apps Script เพื่อดึงข้อมูลหัวข้อและจำนวนผลงานล่าสุด';
+    if (bannerPercent) bannerPercent.textContent = '20';
+    if (bannerFill) bannerFill.style.width = '20%';
+
     if (skeleton) skeleton.classList.add('hidden');
     if (progressCard) progressCard.classList.remove('hidden');
-
-    if (percentEl) percentEl.textContent = '15';
-    if (fillEl) fillEl.style.width = '15%';
+    if (percentEl) percentEl.textContent = '20';
+    if (fillEl) fillEl.style.width = '20%';
     if (stageEl) stageEl.textContent = 'กำลังเชื่อมต่อ Google Sheets API...';
 
     this.catTimer = setInterval(() => {
       if (this.catPercent < 88) {
         const step = (88 - this.catPercent) * 0.12;
         this.catPercent += Math.max(1, Math.round(step));
-        if (percentEl) percentEl.textContent = Math.round(this.catPercent);
-        if (fillEl) fillEl.style.width = `${Math.round(this.catPercent)}%`;
+        const p = Math.round(this.catPercent);
+
+        if (bannerPercent) bannerPercent.textContent = p;
+        if (bannerFill) bannerFill.style.width = `${p}%`;
+        if (percentEl) percentEl.textContent = p;
+        if (fillEl) fillEl.style.width = `${p}%`;
 
         if (this.catPercent >= 45 && this.catPercent < 75) {
-          if (stageEl) stageEl.textContent = 'กำลังอ่านรายชื่อหัวข้อและจำนวนผลงาน...';
+          const text = 'กำลังอ่านรายชื่อหัวข้อและจำนวนผลงาน...';
+          if (bannerSubtitle) bannerSubtitle.textContent = text;
+          if (stageEl) stageEl.textContent = text;
         } else if (this.catPercent >= 75) {
-          if (stageEl) stageEl.textContent = 'กำลังประมวลผลข้อมูลและเตรียมแสดงผล...';
+          const text = 'กำลังประมวลผลข้อมูลและเตรียมแสดงผล...';
+          if (bannerSubtitle) bannerSubtitle.textContent = text;
+          if (stageEl) stageEl.textContent = text;
         }
       }
-    }, 140);
+    }, 110);
   },
 
   finishCategoriesLoading(callback) {
     clearInterval(this.catTimer);
+    const banner = document.getElementById('globalDataSyncBanner');
+    const bannerTitle = document.getElementById('syncBannerTitle');
+    const bannerSubtitle = document.getElementById('syncBannerSubtitle');
+    const bannerPercent = document.getElementById('syncBannerPercent');
+    const bannerFill = document.getElementById('syncBannerFill');
+
     const progressCard = document.getElementById('categoriesLoadingProgress');
     const percentEl = document.getElementById('categoriesProgressPercent');
     const fillEl = document.getElementById('categoriesProgressBarFill');
     const stageEl = document.getElementById('categoriesProgressStageText');
 
-    if (percentEl) percentEl.textContent = '100';
-    if (fillEl) fillEl.style.width = '100%';
-    if (stageEl) stageEl.textContent = 'โหลดข้อมูลหัวข้อเสร็จสมบูรณ์!';
+    // Ensure user sees the progress animation for at least 700ms so it doesn't flash by
+    const elapsed = Date.now() - (this.startTime || 0);
+    const remainingWait = Math.max(0, 700 - elapsed);
 
     setTimeout(() => {
-      if (progressCard) progressCard.classList.add('hidden');
-      if (callback) callback();
-    }, 220);
+      if (bannerPercent) bannerPercent.textContent = '100';
+      if (bannerFill) bannerFill.style.width = '100%';
+      if (bannerTitle) bannerTitle.textContent = 'ดาวน์โหลดข้อมูลจาก Google Sheets สำเร็จเรียบร้อยแล้ว!';
+      if (bannerSubtitle) bannerSubtitle.textContent = 'ข้อมูลหัวข้อทั้งหมดพร้อมใช้งาน';
+
+      if (percentEl) percentEl.textContent = '100';
+      if (fillEl) fillEl.style.width = '100%';
+      if (stageEl) stageEl.textContent = 'โหลดข้อมูลหัวข้อเสร็จสมบูรณ์!';
+
+      setTimeout(() => {
+        if (banner) banner.classList.add('hidden');
+        if (progressCard) progressCard.classList.add('hidden');
+        if (callback) callback();
+      }, 400);
+    }, remainingWait);
   },
 
   failCategories(errorMsg) {
     clearInterval(this.catTimer);
-    const progressCard = document.getElementById('categoriesLoadingProgress');
+    const bannerTitle = document.getElementById('syncBannerTitle');
+    const bannerSubtitle = document.getElementById('syncBannerSubtitle');
     const stageEl = document.getElementById('categoriesProgressStageText');
-    if (stageEl) stageEl.textContent = 'เกิดข้อผิดพลาด: ' + (errorMsg || 'ไม่สามารถโหลดได้');
+    const banner = document.getElementById('globalDataSyncBanner');
+    const progressCard = document.getElementById('categoriesLoadingProgress');
+
+    const text = 'เกิดข้อผิดพลาดในการเชื่อมต่อ Google Sheets: ' + (errorMsg || 'โปรดลองใหม่อีกครั้ง');
+    if (bannerTitle) bannerTitle.textContent = 'เกิดข้อผิดพลาดในการเชื่อมต่อ Google Sheets';
+    if (bannerSubtitle) bannerSubtitle.textContent = errorMsg || 'กรุณาลองใหม่อีกครั้ง';
+    if (stageEl) stageEl.textContent = text;
+
     setTimeout(() => {
+      if (banner) banner.classList.add('hidden');
       if (progressCard) progressCard.classList.add('hidden');
-    }, 1500);
+    }, 2500);
   },
 
   startSubmissionsLoading(catTitle = '') {
     clearInterval(this.subTimer);
-    this.subPercent = 15;
+    this.subPercent = 20;
+    this.startTime = Date.now();
+
+    const banner = document.getElementById('globalDataSyncBanner');
+    const bannerTitle = document.getElementById('syncBannerTitle');
+    const bannerSubtitle = document.getElementById('syncBannerSubtitle');
+    const bannerPercent = document.getElementById('syncBannerPercent');
+    const bannerFill = document.getElementById('syncBannerFill');
 
     const progressCard = document.getElementById('submissionsLoadingProgress');
     const skeleton = document.getElementById('submissionsLoadingSkeleton');
@@ -141,54 +196,92 @@ const PageLoadingManager = {
     const fillEl = document.getElementById('submissionsProgressBarFill');
     const stageEl = document.getElementById('submissionsProgressStageText');
 
+    if (banner) banner.classList.remove('hidden');
+    if (bannerTitle) bannerTitle.textContent = 'กำลังดาวน์โหลดผลงานเกมและภาพจาก Google Drive...';
+    if (bannerSubtitle) bannerSubtitle.textContent = catTitle ? `ดึงข้อมูลผลงานในหัวข้อ "${catTitle}"` : 'กำลังเชื่อมต่อฐานข้อมูล Google Sheets & Google Drive';
+    if (bannerPercent) bannerPercent.textContent = '20';
+    if (bannerFill) bannerFill.style.width = '20%';
+
     if (skeleton) skeleton.classList.add('hidden');
     if (progressCard) progressCard.classList.remove('hidden');
-
-    if (percentEl) percentEl.textContent = '15';
-    if (fillEl) fillEl.style.width = '15%';
+    if (percentEl) percentEl.textContent = '20';
+    if (fillEl) fillEl.style.width = '20%';
     if (stageEl) stageEl.textContent = 'กำลังเชื่อมต่อฐานข้อมูล Google Sheets & Google Drive...';
 
     this.subTimer = setInterval(() => {
       if (this.subPercent < 90) {
         const step = (90 - this.subPercent) * 0.12;
         this.subPercent += Math.max(1, Math.round(step));
-        if (percentEl) percentEl.textContent = Math.round(this.subPercent);
-        if (fillEl) fillEl.style.width = `${Math.round(this.subPercent)}%`;
+        const p = Math.round(this.subPercent);
+
+        if (bannerPercent) bannerPercent.textContent = p;
+        if (bannerFill) bannerFill.style.width = `${p}%`;
+        if (percentEl) percentEl.textContent = p;
+        if (fillEl) fillEl.style.width = `${p}%`;
 
         if (this.subPercent >= 45 && this.subPercent < 75) {
-          if (stageEl) stageEl.textContent = catTitle ? `กำลังดึงข้อมูลผลงานในหัวข้อ "${catTitle}"...` : 'กำลังดึงข้อมูลผลงานและภาพจาก Google Drive...';
+          const text = catTitle ? `กำลังดึงข้อมูลผลงานและภาพหน้าปกในหัวข้อ "${catTitle}"...` : 'กำลังดึงข้อมูลผลงานและภาพจาก Google Drive...';
+          if (bannerSubtitle) bannerSubtitle.textContent = text;
+          if (stageEl) stageEl.textContent = text;
         } else if (this.subPercent >= 75) {
-          if (stageEl) stageEl.textContent = 'กำลังจัดเรียงผลงานตามเลขที่และเตรียมแสดงผล...';
+          const text = 'กำลังจัดเรียงผลงานตามเลขที่และเตรียมแสดงผล...';
+          if (bannerSubtitle) bannerSubtitle.textContent = text;
+          if (stageEl) stageEl.textContent = text;
         }
       }
-    }, 140);
+    }, 110);
   },
 
   finishSubmissionsLoading(callback) {
     clearInterval(this.subTimer);
+    const banner = document.getElementById('globalDataSyncBanner');
+    const bannerTitle = document.getElementById('syncBannerTitle');
+    const bannerSubtitle = document.getElementById('syncBannerSubtitle');
+    const bannerPercent = document.getElementById('syncBannerPercent');
+    const bannerFill = document.getElementById('syncBannerFill');
+
     const progressCard = document.getElementById('submissionsLoadingProgress');
     const percentEl = document.getElementById('submissionsProgressPercent');
     const fillEl = document.getElementById('submissionsProgressBarFill');
     const stageEl = document.getElementById('submissionsProgressStageText');
 
-    if (percentEl) percentEl.textContent = '100';
-    if (fillEl) fillEl.style.width = '100%';
-    if (stageEl) stageEl.textContent = 'โหลดผลงานทั้งหมดเสร็จสิ้น!';
+    const elapsed = Date.now() - (this.startTime || 0);
+    const remainingWait = Math.max(0, 700 - elapsed);
 
     setTimeout(() => {
-      if (progressCard) progressCard.classList.add('hidden');
-      if (callback) callback();
-    }, 220);
+      if (bannerPercent) bannerPercent.textContent = '100';
+      if (bannerFill) bannerFill.style.width = '100%';
+      if (bannerTitle) bannerTitle.textContent = 'ดาวน์โหลดข้อมูลผลงานและภาพจาก Google Drive สำเร็จ!';
+      if (bannerSubtitle) bannerSubtitle.textContent = 'ข้อมูลผลงานทั้งหมดพร้อมใช้งาน';
+
+      if (percentEl) percentEl.textContent = '100';
+      if (fillEl) fillEl.style.width = '100%';
+      if (stageEl) stageEl.textContent = 'โหลดผลงานทั้งหมดเสร็จสิ้น!';
+
+      setTimeout(() => {
+        if (banner) banner.classList.add('hidden');
+        if (progressCard) progressCard.classList.add('hidden');
+        if (callback) callback();
+      }, 400);
+    }, remainingWait);
   },
 
   failSubmissions(errorMsg) {
     clearInterval(this.subTimer);
+    const bannerTitle = document.getElementById('syncBannerTitle');
+    const bannerSubtitle = document.getElementById('syncBannerSubtitle');
+    const banner = document.getElementById('globalDataSyncBanner');
     const progressCard = document.getElementById('submissionsLoadingProgress');
     const stageEl = document.getElementById('submissionsProgressStageText');
+
+    if (bannerTitle) bannerTitle.textContent = 'เกิดข้อผิดพลาดในการโหลดผลงาน';
+    if (bannerSubtitle) bannerSubtitle.textContent = errorMsg || 'โปรดลองใหม่อีกครั้ง';
     if (stageEl) stageEl.textContent = 'เกิดข้อผิดพลาด: ' + (errorMsg || 'ไม่สามารถโหลดได้');
+
     setTimeout(() => {
+      if (banner) banner.classList.add('hidden');
       if (progressCard) progressCard.classList.add('hidden');
-    }, 1500);
+    }, 2500);
   }
 };
 
@@ -349,6 +442,13 @@ const App = {
 
   init() {
     this.bindEvents();
+
+    // Start progress loading immediately on home view if category is not in URL
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get('category')) {
+      PageLoadingManager.startCategoriesLoading();
+    }
+
     this.handleRoute();
     AdminApp.init();
 

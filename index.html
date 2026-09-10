@@ -64,6 +64,35 @@
     </div>
   </header>
 
+  <!-- Global Data Sync Progress Banner (Unmissable top indicator for Google Sheets & Drive loading) -->
+  <aside id="globalDataSyncBanner" class="global-data-sync-banner" role="status" aria-live="polite">
+    <div class="container">
+      <div class="sync-banner-card">
+        <div class="sync-banner-top">
+          <div class="sync-banner-brand">
+            <div class="sync-icon-ring">
+              <span class="sync-spinner"></span>
+              <span class="sync-icon">☁️</span>
+            </div>
+            <div class="sync-text-group">
+              <div class="sync-title" id="syncBannerTitle">กำลังดาวน์โหลดข้อมูลจาก Google Sheets และ Google Drive...</div>
+              <div class="sync-subtitle" id="syncBannerSubtitle">เชื่อมต่อฐานข้อมูล Google Apps Script เพื่อดึงข้อมูลล่าสุด</div>
+            </div>
+          </div>
+          <div class="sync-percent-box">
+            <span id="syncBannerPercent" class="sync-percent-number">20</span><span class="sync-percent-sign">%</span>
+          </div>
+        </div>
+        <div class="sync-progress-bar-wrap">
+          <div id="syncBannerFill" class="sync-progress-bar-fill animated-stripes" style="width: 20%;"></div>
+        </div>
+        <div class="sync-banner-tip">
+          <span>💡 ระบบกำลังดึงข้อมูลล่าสุดจาก Google Sheets และ Google Drive กรุณารอสักครู่ <strong>ไม่จำเป็นต้องกดรีเฟรชหน้าเว็บ (F5)</strong></span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
   <!-- Main Content Area -->
   <main id="mainContent" role="main">
 
@@ -100,23 +129,23 @@
             </h2>
           </div>
 
-          <!-- Rich Progress Loader for Categories -->
-          <div id="categoriesLoadingProgress" class="section-progress-card hidden" role="status">
+          <!-- Rich Progress Loader for Categories (Visible on initial page load) -->
+          <div id="categoriesLoadingProgress" class="section-progress-card" role="status">
             <div class="progress-card-header">
               <div class="progress-card-icon-wrap">
                 <span class="progress-card-spinner"></span>
                 <span class="progress-card-icon">📊</span>
               </div>
               <div class="progress-card-info">
-                <h3 class="progress-card-title">กำลังโหลดข้อมูลหัวข้อจาก Google Sheets</h3>
+                <h3 class="progress-card-title">กำลังดาวน์โหลดข้อมูลหัวข้อจาก Google Sheets</h3>
                 <p id="categoriesProgressStageText" class="progress-card-stage">กำลังเชื่อมต่อ Google Sheets API...</p>
               </div>
               <div class="progress-card-percent-badge">
-                <span id="categoriesProgressPercent">0</span>%
+                <span id="categoriesProgressPercent">20</span>%
               </div>
             </div>
             <div class="progress-bar-track">
-              <div id="categoriesProgressBarFill" class="progress-bar-fill" style="width: 0%;"></div>
+              <div id="categoriesProgressBarFill" class="progress-bar-fill animated-stripes" style="width: 20%;"></div>
             </div>
             <div class="progress-card-footer">
               <span class="progress-card-hint">💡 ระบบกำลังดึงข้อมูลล่าสุดจาก Google Sheets กรุณารอสักครู่ ไม่จำเป็นต้องกดรีเฟรชหน้าเว็บ (F5)</span>

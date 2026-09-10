@@ -9,61 +9,224 @@
 /**
  * Top Global Progress Bar Controller
  */
-const GlobalProgressBar = {
-  element: null,
-  fillElement: null,
-  progress: 0,
+/**
+ * Universal Global Loading System
+ * Automatically intercepts and manages progress bars with live percentage across ALL current and future pages
+ */
+const GlobalLoadingSystem = {
+  activeRequests: 0,
+  currentPercent: 0,
   timer: null,
+  startTime: 0,
+  minDurationMs: 700,
 
-  init() {
-    this.element = document.getElementById('globalProgressBar');
-    this.fillElement = document.getElementById('globalProgressBarFill');
+  ACTION_LABELS: {
+    getCategories: {
+      title: 'กำลังดาวน์โหลดข้อมูลหัวข้อจาก Google Sheets...',
+      subtitle: 'เชื่อมต่อฐานข้อมูล Google Apps Script เพื่อดึงข้อมูลหัวข้อและจำนวนผลงานล่าสุด'
+    },
+    getSubmissions: {
+      title: 'กำลังดาวน์โหลดผลงานเกมและภาพจาก Google Drive...',
+      subtitle: 'กำลังดึงข้อมูลผลงาน รหัสนักเรียน และรูปภาพหน้าปก'
+    },
+    getCategory: {
+      title: 'กำลังดาวน์โหลดข้อมูลหัวข้อ...',
+      subtitle: 'กำลังดึงรายละเอียดเกณฑ์การส่งผลงาน'
+    },
+    submitWork: {
+      title: 'กำลังส่งผลงานและอัปโหลดภาพไปยัง Google Drive...',
+      subtitle: 'กำลังบันทึกข้อมูลเข้า Google Sheets อย่างปลอดภัย'
+    },
+    adminLogin: {
+      title: 'กำลังเชื่อมต่อระบบตรวจสอบสิทธิ์ผู้ดูแลระบบ...',
+      subtitle: 'กำลังยืนยันความปลอดภัยและออกเซสชันโทเค็น'
+    },
+    createCategory: {
+      title: 'กำลังสร้างโฟลเดอร์ Google Drive และหัวข้อใหม่...',
+      subtitle: 'กำลังบันทึกข้อมูลลง Google Sheets'
+    },
+    updateCategory: {
+      title: 'กำลังอัปเดตข้อมูลหัวข้อใน Google Sheets...',
+      subtitle: 'กำลังบันทึกการเปลี่ยนแปลง'
+    },
+    deleteCategory: {
+      title: 'กำลังลบหัวข้อจากระบบ...',
+      subtitle: 'กำลังปรับปรุงฐานข้อมูล Google Sheets'
+    },
+    deleteSubmission: {
+      title: 'กำลังลบผลงานจากระบบ...',
+      subtitle: 'กำลังปรับปรุงฐานข้อมูลและ Google Drive'
+    }
   },
 
-  start() {
-    if (!this.element) this.init();
-    if (!this.element) return;
-    this.element.classList.remove('hidden');
-    this.progress = 12;
-    this.update();
+  _ensureDOMElements() {
+    if (typeof document === 'undefined' || !document.body) return;
 
-    clearInterval(this.timer);
-    this.timer = setInterval(() => {
-      if (this.progress < 85) {
-        const diff = (85 - this.progress) * 0.12;
-        this.progress += Math.max(1, diff);
-        this.update();
+    // 1. Ensure Top Neon Progress Bar exists
+    if (!document.getElementById('globalProgressBar')) {
+      const bar = document.createElement('aside');
+      bar.id = 'globalProgressBar';
+      bar.className = 'global-progress-bar hidden';
+      bar.setAttribute('role', 'progressbar');
+      bar.setAttribute('aria-label', 'สถานะการดาวน์โหลดข้อมูล');
+      bar.innerHTML = '<div id="globalProgressBarFill" class="global-progress-bar-fill" style="width: 0%;"></div>';
+      document.body.prepend(bar);
+    }
+
+    // 2. Ensure Global Data Sync Banner exists
+    if (!document.getElementById('globalDataSyncBanner')) {
+      const banner = document.createElement('aside');
+      banner.id = 'globalDataSyncBanner';
+      banner.className = 'global-data-sync-banner hidden';
+      banner.setAttribute('role', 'status');
+      banner.setAttribute('aria-live', 'polite');
+      banner.innerHTML = `
+        <div class="container">
+          <div class="sync-banner-card">
+            <div class="sync-banner-top">
+              <div class="sync-banner-brand">
+                <div class="sync-icon-ring">
+                  <span class="sync-spinner"></span>
+                  <span class="sync-icon">☁️</span>
+                </div>
+                <div class="sync-text-group">
+                  <div class="sync-title" id="syncBannerTitle">กำลังดาวน์โหลดข้อมูลจาก Google Sheets และ Google Drive...</div>
+                  <div class="sync-subtitle" id="syncBannerSubtitle">เชื่อมต่อฐานข้อมูล Google Apps Script เพื่อดึงข้อมูลล่าสุด</div>
+                </div>
+              </div>
+              <div class="sync-percent-box">
+                <span id="syncBannerPercent" class="sync-percent-number">20</span><span class="sync-percent-sign">%</span>
+              </div>
+            </div>
+            <div class="sync-progress-bar-wrap">
+              <div id="syncBannerFill" class="sync-progress-bar-fill animated-stripes" style="width: 20%;"></div>
+            </div>
+            <div class="sync-banner-tip">
+              <span>💡 ระบบกำลังดึงข้อมูลล่าสุดจาก Google Sheets และ Google Drive กรุณารอสักครู่ <strong>ไม่จำเป็นต้องกดรีเฟรชหน้าเว็บ (F5)</strong></span>
+            </div>
+          </div>
+        </div>
+      `;
+      const header = document.querySelector('header, .site-header, nav, .navbar');
+      if (header && header.nextSibling) {
+        header.parentNode.insertBefore(banner, header.nextSibling);
+      } else {
+        document.body.prepend(banner);
       }
-    }, 180);
+    }
   },
 
-  set(percent) {
-    if (!this.element) this.init();
-    this.progress = Math.min(100, Math.max(0, percent));
-    this.update();
+  start(action = '', customTitle = '', customSubtitle = '') {
+    this._ensureDOMElements();
+    this.activeRequests++;
+    if (this.activeRequests === 1) {
+      this.startTime = Date.now();
+      this.currentPercent = 20;
+
+      const banner = document.getElementById('globalDataSyncBanner');
+      const bannerTitle = document.getElementById('syncBannerTitle');
+      const bannerSubtitle = document.getElementById('syncBannerSubtitle');
+      const bannerPercent = document.getElementById('syncBannerPercent');
+      const bannerFill = document.getElementById('syncBannerFill');
+      const topBar = document.getElementById('globalProgressBar');
+      const topFill = document.getElementById('globalProgressBarFill');
+
+      if (topBar) topBar.classList.remove('hidden');
+      if (banner) banner.classList.remove('hidden');
+
+      const mapped = this.ACTION_LABELS[action] || {
+        title: customTitle || 'กำลังดาวน์โหลดข้อมูลจาก Google Sheets และ Google Drive...',
+        subtitle: customSubtitle || 'เชื่อมต่อฐานข้อมูล Google Apps Script เพื่อดึงข้อมูลล่าสุด'
+      };
+
+      if (bannerTitle) bannerTitle.textContent = mapped.title;
+      if (bannerSubtitle) bannerSubtitle.textContent = mapped.subtitle;
+      if (bannerPercent) bannerPercent.textContent = '20';
+      if (bannerFill) bannerFill.style.width = '20%';
+      if (topFill) topFill.style.width = '20%';
+
+      clearInterval(this.timer);
+      this.timer = setInterval(() => {
+        if (this.currentPercent < 88) {
+          const step = (88 - this.currentPercent) * 0.12;
+          this.currentPercent += Math.max(1, Math.round(step));
+          const p = Math.round(this.currentPercent);
+
+          if (bannerPercent) bannerPercent.textContent = p;
+          if (bannerFill) bannerFill.style.width = `${p}%`;
+          if (topFill) topFill.style.width = `${p}%`;
+
+          if (this.currentPercent >= 50 && this.currentPercent < 75) {
+            if (bannerSubtitle && !customSubtitle) {
+              bannerSubtitle.textContent = 'กำลังประมวลผลข้อมูลและเตรียมแสดงผล...';
+            }
+          }
+        }
+      }, 110);
+    }
   },
 
-  done() {
-    if (!this.element) return;
-    clearInterval(this.timer);
-    this.progress = 100;
-    this.update();
-    setTimeout(() => {
-      if (this.element) this.element.classList.add('hidden');
-      this.progress = 0;
-      this.update();
-    }, 350);
+  setProgress(percent, stageText = '') {
+    this.currentPercent = Math.min(100, Math.max(0, percent));
+    const p = Math.round(this.currentPercent);
+
+    const bannerPercent = document.getElementById('syncBannerPercent');
+    const bannerFill = document.getElementById('syncBannerFill');
+    const bannerSubtitle = document.getElementById('syncBannerSubtitle');
+    const topFill = document.getElementById('globalProgressBarFill');
+
+    if (bannerPercent) bannerPercent.textContent = p;
+    if (bannerFill) bannerFill.style.width = `${p}%`;
+    if (topFill) topFill.style.width = `${p}%`;
+    if (stageText && bannerSubtitle) bannerSubtitle.textContent = stageText;
   },
 
-  update() {
-    if (this.fillElement) {
-      this.fillElement.style.width = `${Math.round(this.progress)}%`;
-      if (this.element) {
-        this.element.setAttribute('aria-valuenow', Math.round(this.progress));
-      }
+  done(customDoneMsg = '') {
+    this.activeRequests = Math.max(0, this.activeRequests - 1);
+    if (this.activeRequests === 0) {
+      clearInterval(this.timer);
+      const banner = document.getElementById('globalDataSyncBanner');
+      const bannerTitle = document.getElementById('syncBannerTitle');
+      const bannerSubtitle = document.getElementById('syncBannerSubtitle');
+      const bannerPercent = document.getElementById('syncBannerPercent');
+      const bannerFill = document.getElementById('syncBannerFill');
+      const topBar = document.getElementById('globalProgressBar');
+      const topFill = document.getElementById('globalProgressBarFill');
+
+      const elapsed = Date.now() - (this.startTime || 0);
+      const remainingWait = Math.max(0, this.minDurationMs - elapsed);
+
+      setTimeout(() => {
+        if (bannerPercent) bannerPercent.textContent = '100';
+        if (bannerFill) bannerFill.style.width = '100%';
+        if (topFill) topFill.style.width = '100%';
+        if (bannerTitle) bannerTitle.textContent = customDoneMsg || 'ดาวน์โหลดข้อมูลสำเร็จเรียบร้อยแล้ว!';
+        if (bannerSubtitle) bannerSubtitle.textContent = 'ข้อมูลพร้อมใช้งาน';
+
+        setTimeout(() => {
+          if (banner) banner.classList.add('hidden');
+          if (topBar) topBar.classList.add('hidden');
+          this.currentPercent = 0;
+        }, 350);
+      }, remainingWait);
     }
   }
 };
+
+// Aliases for global compatibility & future page access
+const GlobalProgressBar = GlobalLoadingSystem;
+window.GlobalLoadingSystem = GlobalLoadingSystem;
+window.showDataLoading = (title, subtitle) => GlobalLoadingSystem.start('custom', title, subtitle);
+window.hideDataLoading = (doneMsg) => GlobalLoadingSystem.done(doneMsg);
+window.setDataProgress = (percent, text) => GlobalLoadingSystem.setProgress(percent, text);
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => GlobalLoadingSystem._ensureDOMElements());
+  } else {
+    GlobalLoadingSystem._ensureDOMElements();
+  }
+}
 
 class ApiClient {
   constructor() {
@@ -114,6 +277,7 @@ class ApiClient {
    */
   async getCategories(forceRefresh = false) {
     if (this.isMock) {
+      await new Promise(r => setTimeout(r, 600));
       const categories = this._getMockCategories().filter(c => !c.deletedAt);
       const submissions = this._getMockSubmissions().filter(s => !s.deletedAt);
       const withCounts = categories.map(cat => ({
@@ -144,6 +308,7 @@ class ApiClient {
    */
   async getCategory(categoryId) {
     if (this.isMock) {
+      await new Promise(r => setTimeout(r, 300));
       const cat = this._getMockCategories().find(c => c.categoryId === categoryId && !c.deletedAt);
       if (!cat) {
         return { success: false, error: { code: 'NOT_FOUND', message: 'ไม่พบหัวข้อการส่งงานนี้' } };
@@ -168,6 +333,7 @@ class ApiClient {
    */
   async getSubmissions(categoryId, forceRefresh = false) {
     if (this.isMock) {
+      await new Promise(r => setTimeout(r, 600));
       const all = this._getMockSubmissions();
       const filtered = all.filter(s => s.categoryId === categoryId && !s.deletedAt);
       return { success: true, data: filtered };
@@ -411,21 +577,24 @@ class ApiClient {
    * ----------------------------------------------------------- */
 
   async _fetchJson(url, timeoutMs = 30000) {
-    GlobalProgressBar.start();
+    const actionMatch = url.match(/[?&]action=([^&]+)/);
+    const action = actionMatch ? decodeURIComponent(actionMatch[1]) : '';
+    GlobalLoadingSystem.start(action);
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       const res = await fetch(url, { method: 'GET', signal: controller.signal });
       clearTimeout(timeoutId);
-      GlobalProgressBar.done();
+      GlobalLoadingSystem.done();
       if (!res.ok) {
         throw new Error(`HTTP Error: ${res.status} ${res.statusText}`);
       }
       return await res.json();
     } catch (err) {
       clearTimeout(timeoutId);
-      GlobalProgressBar.done();
+      GlobalLoadingSystem.done();
       console.error('Fetch error:', err);
       let message = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: ' + err.message;
       if (err.name === 'AbortError') {
@@ -441,7 +610,7 @@ class ApiClient {
   }
 
   async _postJson(payload, timeoutMs = 35000) {
-    GlobalProgressBar.start();
+    GlobalLoadingSystem.start(payload.action || 'post');
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -455,14 +624,14 @@ class ApiClient {
         signal: controller.signal
       });
       clearTimeout(timeoutId);
-      GlobalProgressBar.done();
+      GlobalLoadingSystem.done();
       if (!res.ok) {
         throw new Error(`HTTP Error: ${res.status} ${res.statusText}`);
       }
       return await res.json();
     } catch (err) {
       clearTimeout(timeoutId);
-      GlobalProgressBar.done();
+      GlobalLoadingSystem.done();
       console.error('Post error:', err);
       let message = 'เกิดข้อผิดพลาดในการส่งข้อมูล: ' + err.message;
       if (err.name === 'AbortError') {
@@ -481,6 +650,8 @@ class ApiClient {
    * Post JSON with Real-Time Upload Progress (using XMLHttpRequest)
    */
   _postJsonWithProgress(payload, onProgress, timeoutMs = 60000) {
+    GlobalLoadingSystem.start(payload.action || 'submitWork');
+
     return new Promise((resolve) => {
       const xhr = new XMLHttpRequest();
       let timedOut = false;
@@ -495,20 +666,24 @@ class ApiClient {
 
       // Track byte upload
       xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable && onProgress) {
+        if (e.lengthComputable) {
           // Map network upload to 15% - 65% of overall process
           const ratio = e.loaded / e.total;
           const currentPct = Math.round(15 + ratio * 50);
-          onProgress({
-            stage: 'uploading',
-            percent: Math.min(65, currentPct),
-            detail: `กำลังอัปโหลดไฟล์และข้อมูลไปยังเซิร์ฟเวอร์ (${Math.round(ratio * 100)}%)...`
-          });
+          GlobalLoadingSystem.setProgress(currentPct);
+          if (onProgress) {
+            onProgress({
+              stage: 'uploading',
+              percent: Math.min(65, currentPct),
+              detail: `กำลังอัปโหลดไฟล์และข้อมูลไปยังเซิร์ฟเวอร์ (${Math.round(ratio * 100)}%)...`
+            });
+          }
         }
       });
 
       // Byte upload completed, now server processing
       xhr.upload.addEventListener('load', () => {
+        GlobalLoadingSystem.setProgress(70, 'กำลังบันทึกภาพลง Google Drive และเขียนข้อมูลลง Google Sheets...');
         if (onProgress) {
           onProgress({
             stage: 'processing',
@@ -521,6 +696,8 @@ class ApiClient {
       xhr.onreadystatechange = () => {
         if (xhr.readyState === XMLHttpRequest.DONE) {
           clearTimeout(timeoutId);
+          GlobalLoadingSystem.done();
+
           if (timedOut) {
             resolve({
               success: false,
@@ -553,6 +730,7 @@ class ApiClient {
 
       xhr.onerror = () => {
         clearTimeout(timeoutId);
+        GlobalLoadingSystem.done();
         resolve({
           success: false,
           error: { code: 'NETWORK_ERROR', message: 'ไม่สามารถเชื่อมต่อ Google Apps Script ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต' }

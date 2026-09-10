@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hongson Student Innovators — ศูนย์รวมเว็บแอปพลิเคชันและผลงานนักเรียน</title>
+  <meta name="description" content="แพลตฟอร์มรวบรวมและจัดแสดงผลงาน Web App ของนักเรียน (เช่น เกมการเรียนรู้, แอพสุขภาพ, แอพคำนวณต่าง ๆ) พร้อมระบบส่งผลงานและตรวจสอบการส่งงาน">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="assets/images/logo.png">
+  
+  <!-- Google Fonts Preconnect -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <!-- Core Stylesheet -->
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+  <!-- Admin Mode Notification Bar (Visible only when Admin is logged in) -->
+  <aside id="adminBar" class="admin-bar hidden" aria-label="แถบควบคุมผู้ดูแลระบบ">
+    <div class="container">
+      <div class="admin-bar-content">
+        <div class="admin-badge-indicator">
+          <span class="admin-pulse-dot"></span>
+          <span>โหมดผู้ดูแลระบบ (Admin Mode Active)</span>
+        </div>
+        <div class="admin-bar-actions">
+          <button id="adminCreateCategoryBtn" class="btn btn-sm btn-secondary">➕ สร้างหัวข้อใหม่</button>
+          <button id="adminDiagBtn" class="btn btn-sm btn-secondary">📊 ตรวจสอบระบบ</button>
+          <button id="adminLogoutBtn" class="btn btn-sm btn-danger">ออกจากระบบ</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Site Navigation Header -->
+  <header class="site-header" role="banner">
+    <div class="container">
+      <div class="header-content">
+        <a href="./" id="brandLogo" class="brand-logo" title="Hongson Student Innovators — กลับหน้าแรก">
+          <img src="Logo/Student Web App Logo.png" alt="Hongson Student Innovators Logo" class="brand-logo-img">
+          <div class="brand-text-wrap">
+            <span class="brand-title">Hongson Student Innovators</span>
+            <span class="brand-subtitle">ศูนย์รวมเว็บแอปพลิเคชันและผลงานนักเรียน</span>
+          </div>
+        </a>
+        <nav class="header-actions" aria-label="เมนูหลัก">
+          <div class="header-devbadge" title="ผู้พัฒนาระบบ">
+            <span class="devbadge-pulse"></span>
+            <span>พัฒนาโดย: นายสาธิต ศิริวัชน์ (COOLNUT)</span>
+          </div>
+          <button id="adminLoginNavBtn" class="btn btn-secondary" title="เข้าสู่ระบบผู้ดูแล">
+            <span>⚙️ ผู้ดูแลระบบ</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main id="mainContent" role="main">
+
+    <!-- ============================================================== -->
+    <!-- VIEW 1: HOME VIEW (LIST OF CATEGORIES)                         -->
+    <!-- ============================================================== -->
+    <section id="homeView" class="view-container">
+      <!-- Hero Banner -->
+      <section class="hero-section">
+        <div class="container">
+          <div class="hero-badge-wrap">
+            <div class="hero-pill">✨ Student WebApp Showcase & Innovation Hub</div>
+            <div class="hero-dev-badge">
+              <span class="dev-pulse"></span>
+              <span>พัฒนาโดย: นายสาธิต ศิริวัชน์ (COOLNUT)</span>
+            </div>
+          </div>
+          <h1 class="hero-title">
+            ศูนย์รวมเว็บแอปพลิเคชัน <br>
+            <span class="hero-title-gradient">Hongson Student Innovators</span>
+          </h1>
+          <p class="hero-subtitle">
+            พื้นที่แสดงศักยภาพและความคิดสร้างสรรค์ของนักเรียน รวบรวม Web App ทุกรูปแบบ เช่น เกมการเรียนรู้, แอพสุขภาพ, แอพคำนวณต่าง ๆ และสื่อนวัตกรรมดิจิทัล ร่วมทดลองใช้งานและส่งผลงานได้ที่นี่
+          </p>
+        </div>
+      </section>
+
+      <!-- Categories Section -->
+      <section class="categories-section">
+        <div class="container">
+          <div class="section-header-wrap">
+            <h2 class="section-title">
+              <span>📚 หัวข้อการส่งงานทั้งหมด</span>
+            </h2>
+          </div>
+
+          <!-- Loading Skeleton for Categories -->
+          <div id="categoriesLoadingSkeleton" class="skeleton-grid hidden">
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+          </div>
+
+          <!-- Empty State -->
+          <div id="categoriesEmptyState" class="empty-state hidden">
+            <div class="empty-state-icon">📁</div>
+            <h3 class="empty-state-title">ยังไม่มีหัวข้อการส่งงานในระบบ</h3>
+            <p class="empty-state-desc">ผู้ดูแลระบบสามารถเข้าสู่ระบบเพื่อสร้างหัวข้อการส่งงานใหม่ได้</p>
+          </div>
+
+          <!-- Category Cards Grid Container -->
+          <div id="categoryCardsGrid" class="category-cards-grid"></div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- VIEW 2: CATEGORY DETAIL VIEW (GALLERY & SUMMARY)              -->
+    <!-- ============================================================== -->
+    <section id="categoryDetailView" class="view-container category-detail-section hidden">
+      <div class="container">
+        
+        <!-- Navigation Back Bar -->
+        <div class="detail-nav-bar">
+          <button id="backToHomeBtn" class="btn btn-secondary">
+            <span>&larr; กลับหน้ารวมหัวข้อ</span>
+          </button>
+        </div>
+
+        <!-- Category Header Info Card -->
+        <div class="category-detail-header-card">
+          <div class="cat-header-top">
+            <div>
+              <h2 id="categoryDetailTitle" class="category-detail-title">ชื่อหัวข้อการส่งงาน</h2>
+              <p id="categoryDetailDesc" class="category-detail-desc">คำอธิบายรายละเอียดของหัวข้อ</p>
+            </div>
+            <div class="cat-header-badges">
+              <span id="categoryStatusBadge" class="badge badge-success">🟢 เปิดรับผลงาน</span>
+              <span id="categorySubmissionsCountBadge" class="badge badge-subtle">🚀 0 ผลงาน</span>
+            </div>
+          </div>
+
+          <div class="cat-header-toolbar">
+            <div id="categoryAdminToolbar" class="cat-admin-tools hidden"></div>
+            <button id="openSubmitModalBtn" class="btn btn-primary">
+              <span>➕ เพิ่มผลงานของฉัน</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Toolbar: Search & Sort Filter -->
+        <div class="gallery-toolbar">
+          <div class="search-input-wrap">
+            <span class="search-icon">🔍</span>
+            <input 
+              type="text" 
+              id="gallerySearchInput" 
+              class="search-input" 
+              placeholder="ค้นหาตามชื่อผลงาน, เว็บแอป, ชื่อผู้สร้าง, เลขที่, หรือชั้น..." 
+              aria-label="ค้นหาผลงานเว็บแอป"
+            >
+          </div>
+          <div class="sort-select-wrap">
+            <label for="gallerySortSelect" class="text-sm font-medium text-muted">เรียงตาม:</label>
+            <select id="gallerySortSelect" class="select-input" aria-label="ตัวเลือกการเรียงลำดับ">
+              <option value="studentNoAsc">เลขที่ (น้อย → มาก) &amp; ชื่อไทย (ก-ฮ)</option>
+              <option value="latest">ผลงานล่าสุด</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Loading Skeleton for Gallery -->
+        <div id="submissionsLoadingSkeleton" class="skeleton-grid hidden">
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+        </div>
+
+        <!-- Empty State for Gallery -->
+        <div id="submissionsEmptyState" class="empty-state hidden">
+          <div class="empty-state-icon">🚀</div>
+          <h3 class="empty-state-title">ยังไม่มีผลงานในหัวข้อนี้</h3>
+          <p class="empty-state-desc">เป็นคนแรกที่ส่งผลงาน Web App ของคุณได้เลย!</p>
+        </div>
+
+        <!-- WebApp Cards Grid -->
+        <div id="gameGalleryGrid" class="game-gallery-grid"></div>
+
+        <!-- Submission Summary Table Section -->
+        <section class="summary-table-section" aria-labelledby="summaryTitle">
+          <div class="summary-header-wrap">
+            <h3 id="summaryTitle" class="section-title">
+              <span>📋 สรุปการส่งงานของนักเรียน</span>
+            </h3>
+            <span id="summaryTotalCountBadge" class="badge badge-subtle font-bold">0 ผลงาน</span>
+          </div>
+          <div class="table-responsive-wrap">
+            <table class="summary-table" aria-label="ตารางสรุปรายชื่อผู้ส่งผลงาน">
+              <thead>
+                <tr>
+                  <th class="text-center" style="width: 60px;">ลำดับ</th>
+                  <th class="text-center" style="width: 70px;">เลขที่</th>
+                  <th>ชื่อ-นามสกุล</th>
+                  <th class="text-center" style="width: 90px;">ชั้น</th>
+                  <th>สายการเรียน</th>
+                  <th>ชื่อผลงาน / เว็บแอป</th>
+                  <th>วันที่ส่ง</th>
+                  <th class="text-center admin-only hidden" style="width: 70px;">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="submissionSummaryTableBody">
+                <!-- Dynamically generated rows -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: STUDENT SUBMISSION                                      -->
+  <!-- ============================================================== -->
+  <div id="submissionModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="submitModalTitle">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="submitModalTitle" class="modal-title">🚀 ส่งผลงาน Web App นักเรียน</h3>
+        <button id="closeSubmitModalBtn" class="modal-close" aria-label="ปิดหน้าต่าง">&times;</button>
+      </div>
+      <form id="studentSubmissionForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">หัวข้อการส่งงาน:</label>
+            <div id="modalCategoryNameLabel" class="badge badge-subtle font-bold" style="font-size:0.9rem;">-</div>
+          </div>
+
+          <!-- Honeypot Field for anti-spam bot protection -->
+          <input type="text" id="inputHoneypot" class="honeypot-field" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+          <div class="form-group">
+            <label for="inputStudentName" class="form-label">ชื่อ-นามสกุล <span class="required">*</span></label>
+            <input type="text" id="inputStudentName" class="form-control" placeholder="เช่น ด.ช.สมชาย รักเรียน" required>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="inputClassName" class="form-label">ชั้น <span class="required">*</span></label>
+              <input type="text" id="inputClassName" class="form-control" placeholder="เช่น ม.4/1, ม.4/3" required>
+              <div class="form-help">พิมพ์ห้องเรียนของคุณเอง</div>
+            </div>
+            <div class="form-group">
+              <label for="inputStudentNo" class="form-label">เลขที่ <span class="required">*</span></label>
+              <input type="number" id="inputStudentNo" class="form-control font-mono" min="1" max="99" placeholder="เช่น 5" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="inputStudyProgram" class="form-label">สายการเรียน / แผนการเรียน <span class="required">*</span></label>
+            <input type="text" id="inputStudyProgram" class="form-control" placeholder="เช่น ศิลป์-จีน, วิทย์-คอมฯ, วิทย์สุขภาพ" required>
+            <div class="form-help">พิมพ์สายการเรียนของคุณอย่างอิสระ</div>
+          </div>
+
+          <div class="form-group">
+            <label for="inputWorkTitle" class="form-label">ชื่อผลงาน / ชื่อเว็บแอป <span class="required">*</span></label>
+            <input type="text" id="inputWorkTitle" class="form-control" placeholder="เช่น แอพคำนวณแคลอรีสุขภาพ, เกมระบบสุริยะ, เครื่องคิดเลขวิทยาศาสตร์" required>
+          </div>
+
+          <div class="form-group">
+            <label for="inputWorkUrl" class="form-label">URL ผลงาน / ลิงก์เว็บแอป <span class="required">*</span></label>
+            <input type="text" id="inputWorkUrl" class="form-control" placeholder="เช่น https://... หรือ www.mywebapp.com" autocomplete="url" required>
+            <div class="form-help">รองรับทุกลิงก์ (ระบบจะเติม https:// ให้อัตโนมัติหากไม่ได้ระบุ)</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">ภาพหน้าปกผลงาน / ตัวอย่างหน้าจอเว็บแอป (Cover / Screenshot) <span class="required">*</span></label>
+            <label class="cover-upload-box" for="submitCoverInput">
+              <div id="uploadBoxLabel">📸 คลิกเพื่อเลือกรูปภาพหน้าปก / ภาพตัวอย่างเว็บแอป</div>
+              <div class="form-help">รองรับไฟล์ JPEG, PNG, WEBP (ระบบจะย่อขนาดให้อัตโนมัติ)</div>
+              <input type="file" id="submitCoverInput" accept="image/jpeg,image/png,image/webp" style="display:none;" required>
+            </label>
+            <div id="coverPreviewContainer" class="hidden">
+              <div class="cover-preview-wrapper">
+                <img id="coverPreviewImg" src="assets/images/placeholder-cover.svg" alt="ภาพตัวอย่างหน้าปก">
+              </div>
+              <div id="coverPreviewStats" class="cover-preview-stats"></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="App.closeSubmissionModal()">ยกเลิก</button>
+          <button type="submit" id="submitFormBtn" class="btn btn-primary">
+            <span>🚀 ส่งผลงาน</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: ADMIN LOGIN                                             -->
+  <!-- ============================================================== -->
+  <div id="adminLoginModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="adminLoginTitle">
+    <div class="modal-dialog" style="max-width: 420px;">
+      <div class="modal-header">
+        <h3 id="adminLoginTitle" class="modal-title">🔐 เข้าสู่ระบบผู้ดูแลระบบ</h3>
+        <button id="adminLoginModalClose" class="modal-close" aria-label="ปิดหน้าต่าง">&times;</button>
+      </div>
+      <form id="adminLoginForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="adminPasswordInput" class="form-label">รหัสผ่านผู้ดูแลระบบ (Admin Password):</label>
+            <input type="password" id="adminPasswordInput" class="form-control" placeholder="กรอกรหัสผ่าน..." autocomplete="current-password" required>
+            <div class="form-help">ในโหมด Prototype Phase 1 ใช้รหัส: <code>admin1234</code></div>
+            <div id="adminLoginError" class="text-danger text-sm" style="margin-top:0.5rem;"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="AdminApp.closeLoginModal()">ยกเลิก</button>
+          <button type="submit" id="adminLoginSubmitBtn" class="btn btn-primary">เข้าสู่ระบบ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: ADMIN CREATE / EDIT CATEGORY                            -->
+  <!-- ============================================================== -->
+  <div id="adminCategoryModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="adminCategoryModalTitle">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="adminCategoryModalTitle" class="modal-title">➕ สร้างหัวข้อการส่งงานใหม่</h3>
+        <button class="modal-close" onclick="AdminApp.closeCategoryModal()" aria-label="ปิดหน้าต่าง">&times;</button>
+      </div>
+      <form id="adminCategoryForm">
+        <div class="modal-body">
+          <input type="hidden" id="adminCatIdInput">
+          <div class="form-group">
+            <label for="adminCatTitleInput" class="form-label">ชื่อหัวข้อการส่งงาน <span class="required">*</span></label>
+            <input type="text" id="adminCatTitleInput" class="form-control" placeholder="เช่น โครงงานเว็บแอปสุขภาพ ม.4/2 หรือ นวัตกรรม AI เพื่อการเรียนรู้" required>
+          </div>
+          <div class="form-group">
+            <label for="adminCatDescInput" class="form-label">คำอธิบายรายละเอียด:</label>
+            <textarea id="adminCatDescInput" class="form-control" rows="3" placeholder="ระบุวัตถุประสงค์ เกณฑ์การส่งผลงาน หรือประเภท Web App ที่เปิดรับ..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="AdminApp.closeCategoryModal()">ยกเลิก</button>
+          <button type="submit" id="adminCatSubmitBtn" class="btn btn-primary">บันทึก</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Global Toast Notifications Container -->
+  <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Site Footer -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <img src="Logo/Student Web App Logo.png" alt="Hongson Student Innovators Logo" class="footer-logo-img">
+          <div>
+            <div class="footer-title">Hongson Student Innovators</div>
+            <div class="footer-subtitle">ศูนย์รวมเว็บแอปพลิเคชันและผลงานนวัตกรรมของนักเรียน</div>
+          </div>
+        </div>
+        <div class="footer-center">
+          <div class="dev-badge">
+            <span class="dev-badge-icon">👨‍💻</span>
+            <span class="dev-badge-text">พัฒนาโดย: นายสาธิต ศิริวัชน์ (COOLNUT)</span>
+          </div>
+          <div class="text-sm text-muted">
+            🔒 ข้อมูลที่แสดงในเว็บนี้ใช้เพื่อการนำเสนอผลงานและส่งเสริมการเรียนรู้ทางการศึกษา
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts: Loaded in dependency order -->
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/image-utils.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

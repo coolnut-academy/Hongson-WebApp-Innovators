@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <title>Apps Script API Bridge</title>
+</head>
+<body>
+  <script>
+    (function() {
+      var ALLOWED_ORIGIN = "<?= allowedOrigin ?>";
+
+      window.addEventListener('message', function(event) {
+        // Strict origin validation
+        if (ALLOWED_ORIGIN !== '*' && event.origin !== ALLOWED_ORIGIN) {
+          console.warn('[Bridge] Rejected message from untrusted origin:', event.origin);
+          return;
+        }
+
+        var message = event.data;
+        if (!message || !message.requestId || !message.action) {
+          return;
+        }
+
+        var requestId = message.requestId;
+
+        function sendReply(success, data, error) {
+          if (event.source) {
+            event.source.postMessage({
+              requestId: requestId,
+              success: success,
+              data: data,
+              error: error
+            }, event.origin === '*' ? '*' : event.origin);
+          }
+        }
+
+        try {
+          // Execute on Apps Script server via doPost simulation or internal dispatcher
+          google.script.run
+            .withSuccessHandler(function(responseString) {
+              try {
+                var res = typeof responseString === 'string' ? JSON.parse(responseString) : responseString;
+                sendReply(res.success, res.data, res.error);
+              } catch (parseErr) {
+                sendReply(false, null, { code: 'PARSE_ERROR', message: parseErr.message });
+              }
+            })
+            .withFailureHandler(function(err) {
+              sendReply(false, null, { code: 'SERVER_ERROR', message: err.message });
+            })
+            .dispatchBridgeRequest(JSON.stringify(message));
+        } catch (dispatchErr) {
+          sendReply(false, null, { code: 'DISPATCH_ERROR', message: dispatchErr.message });
+        }
+      });
+
+      console.log('[Bridge] Ready and listening for postMessage commands.');
+    })();
+  </script>
+</body>
+</html>
